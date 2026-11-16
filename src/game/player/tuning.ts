@@ -23,6 +23,8 @@ export const PLAYER = {
   wallJumpSpeedY: 190,
   wallJumpLock: 0.16, // after a wall jump, input can't pull you straight back for this long
   wallJumpReach: 2, // cells: how far from a wall a wall jump still works
+  clingDelay: 0.1, // push into a wall this long while falling before clinging, so brushing past doesn't grab
+  wallMinRows: 8, // a wall only counts if it's beside the top 8 rows of the body; bumps lower than that are stepped over
   climbJumpSpeed: 185, // a jump while grabbing with no direction: straight up the wall
   ledgeHopSpeed: 150, // climbing past the top of a wall pops you up onto it
 } as const

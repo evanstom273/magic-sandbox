@@ -16,6 +16,7 @@ export interface PlayerState {
   climbing: 0 | -1 | 1 // the side of the wall being held, or 0
   wallLock: number
   lockDir: -1 | 1
+  clingPush: number // how long the player has been pushing into a wall while falling
 }
 
 export interface PlayerInput {
@@ -39,7 +40,7 @@ export interface StepEvents {
 export function createPlayer(x: number, y: number): PlayerState {
   return {
     x, y, vx: 0, vy: 0, grounded: false, coyote: 0, buffer: 0, jumpHeld: false, facing: 1,
-    airJumps: PLAYER.airJumps, climbing: 0, wallLock: 0, lockDir: 1,
+    airJumps: PLAYER.airJumps, climbing: 0, wallLock: 0, lockDir: 1, clingPush: 0,
   }
 }
 
@@ -66,9 +67,11 @@ function wallBeside(solid: SolidAt, s: PlayerState, side: -1 | 1, dist: number, 
   return false
 }
 
+/** A wall within `reach` cells. Only something beside the upper body counts, never a bump at the feet. */
 function wallNear(solid: SolidAt, s: PlayerState, reach: number): 0 | -1 | 1 {
+  const rows = PLAYER.wallMinRows - 1
   for (let d = 1; d <= reach; d++) {
-    const r = wallBeside(solid, s, 1, d), l = wallBeside(solid, s, -1, d)
+    const r = wallBeside(solid, s, 1, d, 0, rows), l = wallBeside(solid, s, -1, d, 0, rows)
     if (r && l) return s.facing
     if (r) return 1
     if (l) return -1
@@ -97,14 +100,16 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   if (s.wallLock > 0) move = s.lockDir
   const climb = Math.max(-1, Math.min(1, input.climb))
 
-  // Auto grab: push into a wall while not rising (or press up against one on the ground) to cling.
-  // Once on, the player stays without holding anything; pushing away lets go. No stamina limit.
+  // Auto grab: push into a wall for a moment while falling (or press up against one on the ground)
+  // to cling. Once on, the player stays without holding anything; pushing away lets go. No stamina.
   const touching = wallNear(solid, s, 1)
   const pushing = move === 0 ? 0 : move > 0 ? 1 : -1
+  const pushingWhileFalling = !s.grounded && s.vy > 0 && touching !== 0 && pushing === touching
+  s.clingPush = pushingWhileFalling ? s.clingPush + dt : 0
   if (s.climbing !== 0) {
     if (touching !== s.climbing || pushing === -s.climbing) s.climbing = 0
   } else if (touching !== 0 && s.wallLock <= 0) {
-    const fromAir = !s.grounded && s.vy >= 0 && pushing === touching
+    const fromAir = s.clingPush >= T.clingDelay
     const fromGround = s.grounded && climb < 0
     if (fromAir || fromGround) {
       s.climbing = touching
@@ -180,8 +185,9 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     const nx = s.x + st
     if (!boxHits(solid, nx, s.y)) s.x = nx
     else {
+      // Step up small bumps on the ground, and while coming down, so bumpy ground doesn't catch.
       let climbed = false
-      if (s.grounded) {
+      if (s.grounded || (s.vy >= 0 && s.climbing === 0)) {
         for (let u = 1; u <= T.stepUp; u++) {
           if (!boxHits(solid, nx, s.y - u)) { s.x = nx; s.y -= u; climbed = true; break }
         }

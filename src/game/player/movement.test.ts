@@ -60,6 +60,15 @@ describe('walking and jumping', () => {
     expect(stepPlayer(s, input({ move: 1, jump: true }), DT, ledge).jumped).toBe(true)
   })
 
+  test('a jump pressed just before landing still happens (with the double jump used up)', () => {
+    const s = createPlayer(50, 40)
+    s.airJumps = 0
+    while (s.y < 100 - 5) stepPlayer(s, idle, DT, flat())
+    let jumped = false
+    for (let t = 0; t < 0.5 && !jumped; t += DT) jumped = stepPlayer(s, input({ jump: true }), DT, flat()).jumped
+    expect(jumped).toBe(true)
+  })
+
   test('steps up a small bump without jumping, but stops flush at a wall', () => {
     const bump = flat((x, y) => x >= 70 && y >= 98)
     const s = standing(50, bump)

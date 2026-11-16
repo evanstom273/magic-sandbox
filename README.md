@@ -15,6 +15,7 @@ npm run typecheck
 npm run lint         # oxlint
 npm test             # Vitest unit tests
 npm run test:e2e     # Playwright: boots the game in dev and as a Pages build
+npm run check        # all of the above in order, stopping at the first failure
 ```
 
 Playwright is pinned to 1.63.0 to match the browser in Claude's cloud environment. On a new machine, `npx playwright install chromium` fetches the matching browser.

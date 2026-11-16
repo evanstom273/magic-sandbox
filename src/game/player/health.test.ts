@@ -4,15 +4,15 @@ import { fallDamage, Health, HEALTH } from './health.ts'
 import { createPlayer, stepPlayer, type PlayerInput, type SolidAt } from './movement.ts'
 import { PLAYER } from './tuning.ts'
 
-const S = PLAYER.size
+const S = PLAYER.height
 const DT = 1 / 60
 
 describe('fall damage', () => {
-  test('safe up to 6 body heights, then grows quickly, capped so one fall cannot kill from full', () => {
-    expect(fallDamage(S * 6)).toBe(0)
-    expect(fallDamage(S * 7)).toBe(HEALTH.perHeight)
-    expect(fallDamage(S * 9)).toBe(HEALTH.perHeight * 3)
-    expect(fallDamage(S * 40)).toBe(HEALTH.fallCap)
+  test('safe up to 72 cells, then 1 a cell, capped so one fall cannot kill from full', () => {
+    expect(fallDamage(72)).toBe(0)
+    expect(fallDamage(84)).toBe(12)
+    expect(fallDamage(108)).toBe(36)
+    expect(fallDamage(1000)).toBe(HEALTH.fallCap)
     expect(HEALTH.fallCap).toBeLessThan(HEALTH.max)
   })
 })
@@ -30,7 +30,7 @@ describe('measuring a fall', () => {
       const ev = stepPlayer(s, input({ jump }), DT, floor)
       if (ev.landed >= 0 || (ev.fell > 0 && s.grounded)) fell = ev.fell
     }
-    expect(fell).toBeGreaterThan(S * 4)
+    expect(fell).toBeGreaterThan(48)
     expect(fallDamage(fell)).toBe(0)
   })
 
@@ -49,7 +49,7 @@ describe('measuring a fall', () => {
 
   test('catching a wall resets the fall', () => {
     const shaft: SolidAt = (x, y) => y >= 200 || x >= 80
-    const s = createPlayer(80 - S / 2, 20)
+    const s = createPlayer(80 - PLAYER.width / 2, 20)
     let fell = -1
     for (let t = 0; t < 8 && fell < 0; t += DT) {
       const ev = stepPlayer(s, input({ move: t < 0.25 ? 1 : 0 }), DT, shaft) // catch the wall, then let go and slide down
@@ -78,20 +78,20 @@ describe('health and marks', () => {
   })
 
   test('a dent bites into the bottom of the body, deeper for more damage, and the outline follows it', () => {
-    const square = CellBody.square(S)
+    const square = CellBody.square(12)
     const emptyCells = (b: CellBody) => b.cells.filter((c) => c === BodyCell.EMPTY).length
     const small = square.withMarks([{ kind: 'dent', at: 0.5, amount: 15, seed: 1 }])
     const big = square.withMarks([{ kind: 'dent', at: 0.5, amount: 80, seed: 1 }])
     expect(emptyCells(small)).toBeGreaterThan(0)
     expect(emptyCells(big)).toBeGreaterThan(emptyCells(small))
-    expect(big.get(Math.floor(S / 2), S - 1)).toBe(BodyCell.EMPTY) // bitten out of the bottom
-    expect(big.get(Math.floor(S / 2), 0)).toBe(BodyCell.INK) // the top is untouched
+    expect(big.get(6, 11)).toBe(BodyCell.EMPTY) // bitten out of the bottom
+    expect(big.get(6, 0)).toBe(BodyCell.INK) // the top is untouched
     // Every white cell is inside the outline: none of them touches the outside.
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    for (let y = 0; y < 12; y++) for (let x = 0; x < 12; x++) {
       if (big.get(x, y) !== BodyCell.HERO) continue
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy
-        expect(nx >= 0 && ny >= 0 && nx < S && ny < S && big.get(nx, ny) !== BodyCell.EMPTY).toBe(true)
+        expect(nx >= 0 && ny >= 0 && nx < 12 && ny < 12 && big.get(nx, ny) !== BodyCell.EMPTY).toBe(true)
       }
     }
   })

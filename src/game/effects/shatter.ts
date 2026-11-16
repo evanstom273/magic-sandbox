@@ -4,6 +4,12 @@ import type { SolidAt } from '../player/movement.ts'
 // way back, cells fly in and snap together into the body. (Once the world is simulated, the
 // shattered cells will become real debris.)
 
+export interface CellPoint {
+  x: number
+  y: number
+  cell: number
+}
+
 export interface Shard {
   x: number
   y: number
@@ -21,21 +27,16 @@ export class Shatter {
     this.rand = rand
   }
 
-  /** Breaks a w × h grid of body cells, drawn with its top-left at (left, top), outwards from its centre. */
-  burst(cells: ArrayLike<number>, w: number, h: number, left: number, top: number): void {
+  /** Bursts a set of cells (the figure, at their places in the world) outwards from (cx, cy). */
+  burst(points: readonly CellPoint[], cx: number, cy: number): void {
     this.shards.length = 0
-    const cx = left + w / 2, cy = top + h / 2
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const cell = cells[y * w + x]
-        if (!cell) continue
-        const px = left + x + 0.5, py = top + y + 0.5
-        const dx = px - cx, dy = py - cy
-        const d = Math.hypot(dx, dy) || 1
-        // A gentle burst: the pieces land within a few body widths, not across the room.
-        const speed = 20 + this.rand() * 35
-        this.shards.push({ x: px, y: py, vx: (dx / d) * speed + (this.rand() - 0.5) * 16, vy: (dy / d) * speed - 30 - this.rand() * 40, cell, settled: false })
-      }
+    for (const p of points) {
+      const px = p.x + 0.5, py = p.y + 0.5
+      const dx = px - cx, dy = py - cy
+      const d = Math.hypot(dx, dy) || 1
+      // A gentle burst: the pieces land within a few body widths, not across the room.
+      const speed = 20 + this.rand() * 35
+      this.shards.push({ x: px, y: py, vx: (dx / d) * speed + (this.rand() - 0.5) * 16, vy: (dy / d) * speed - 30 - this.rand() * 40, cell: p.cell, settled: false })
     }
   }
 
@@ -77,17 +78,13 @@ export class Gather {
   t = 0
   readonly duration = 0.55
 
-  start(cells: ArrayLike<number>, w: number, h: number, left: number, top: number, rand: () => number = Math.random): void {
+  /** Cells fly in from around their places and snap into them. */
+  start(points: readonly CellPoint[], rand: () => number = Math.random): void {
     this.t = 0
-    this.cells = []
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const cell = cells[y * w + x]
-        if (!cell) continue
-        const a = rand() * Math.PI * 2, r = 18 + rand() * 22
-        this.cells.push({ fromX: left + x + Math.cos(a) * r, fromY: top + y + Math.sin(a) * r * 0.7, toX: left + x, toY: top + y, cell, delay: rand() * 0.35 })
-      }
-    }
+    this.cells = points.map((p) => {
+      const a = rand() * Math.PI * 2, r = 18 + rand() * 22
+      return { fromX: p.x + Math.cos(a) * r, fromY: p.y + Math.sin(a) * r * 0.7, toX: p.x, toY: p.y, cell: p.cell, delay: rand() * 0.35 }
+    })
   }
 
   get done(): boolean {

@@ -5,8 +5,8 @@ const floor = (_x: number, y: number) => y >= 100
 
 test('a shattered body flies apart, then every piece settles on the floor', () => {
   const s = new Shatter(() => 0.5)
-  const cells = new Uint8Array(12 * 12).fill(2)
-  s.burst(cells, 12, 12, 44, 88)
+  const pts = Array.from({ length: 144 }, (_, i) => ({ x: 44 + (i % 12), y: 88 + Math.floor(i / 12), cell: 2 }))
+  s.burst(pts, 50, 94)
   expect(s.shards).toHaveLength(144)
   for (let i = 0; i < 60 * 6; i++) s.update(1 / 60, floor)
   expect(s.shards.every((p) => p.settled)).toBe(true)
@@ -17,8 +17,8 @@ test('a shattered body flies apart, then every piece settles on the floor', () =
 
 test('gathering cells end exactly where the body is', () => {
   const g = new Gather()
-  const cells = new Uint8Array(12 * 12).fill(2)
-  g.start(cells, 12, 12, 20, 80)
+  const pts = Array.from({ length: 144 }, (_, i) => ({ x: 20 + (i % 12), y: 80 + Math.floor(i / 12), cell: 2 }))
+  g.start(pts)
   expect(g.done).toBe(false)
   for (let i = 0; i < 60; i++) g.update(1 / 60)
   expect(g.done).toBe(true)

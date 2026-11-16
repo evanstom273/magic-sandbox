@@ -1,28 +1,34 @@
 import * as Phaser from 'phaser'
 import { Dust } from '../effects/dust.ts'
 import { Rings } from '../effects/rings.ts'
-import { Gather, Shatter } from '../effects/shatter.ts'
+import { Gather, Shatter, type CellPoint } from '../effects/shatter.ts'
 import { hud } from '../bridge.ts'
 import { touchInput } from '../input/touchInput.ts'
-import { BodyCell, CellBody } from '../player/body.ts'
+import { BodyCell, type CellBody } from '../player/body.ts'
+import { feet, FIG, figureBody, HAND_CELLS, hands, type Face, type Pose } from '../player/figure.ts'
 import { fallDamage, Health, HEALTH } from '../player/health.ts'
 import { createPlayer, stepPlayer, type PlayerState } from '../player/movement.ts'
 import { Squash } from '../player/squash.ts'
 import { PLAYER, SQUASH } from '../player/tuning.ts'
-import { DAMAGE, DUST, HERO, INK } from '../style/tokens.ts'
+import { DAMAGE, DUST, FOOT, HERO, INK } from '../style/tokens.ts'
 import type { CellGrid } from '../world/grid.ts'
 import { buildTestRoom, REST_SPOT, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
 import { paintGrid } from '../world/worldTexture.ts'
 
-const BODY_COLOURS: Record<number, number> = { [BodyCell.INK]: INK, [BodyCell.HERO]: HERO }
+const FOOT_CELL = 3
+const BODY_COLOURS: Record<number, number> = { [BodyCell.INK]: INK, [BodyCell.HERO]: HERO, [FOOT_CELL]: FOOT }
 
 export class MainScene extends Phaser.Scene {
   private grid!: CellGrid
   private player!: PlayerState
   private body!: CellBody
-  private pristine!: CellBody
+  private face: Face = 'open'
+  private hurtFace = 0
+  private blinkIn = 3
+  private blinkFor = 0
+  private walkPhase = 0
   private health = new Health()
-  private marksKey = ''
+  private bodyKey = ''
   private hurtFlash = 0
   // Alive, shattering (slow motion), dead (waiting for Jump), or gathering back together at the start.
   private mode: 'alive' | 'dying' | 'dead' | 'returning' = 'alive'
@@ -55,8 +61,7 @@ export class MainScene extends Phaser.Scene {
 
     this.gfx = this.add.graphics()
     this.player = createPlayer(SPAWN.x, SPAWN.y)
-    this.pristine = CellBody.square(PLAYER.size)
-    this.body = this.pristine
+    this.body = figureBody('open')
     hud.set({ health: this.health.value, maxHealth: HEALTH.max })
     this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K') as Record<string, Phaser.Input.Keyboard.Key>
     const jumpKeys = new Set(['Space', 'KeyK', 'KeyW', 'ArrowUp'])
@@ -140,13 +145,13 @@ export class MainScene extends Phaser.Scene {
     if (ev.doubleJumped) { this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1]); this.rings.add(p.x, p.y, 3, 34, 0.28) }
     if (ev.wallJumped) {
       this.squash.jump()
-      this.dust.puff(p.x + ev.wallJumped * (PLAYER.size / 2), p.y - PLAYER.size / 2, 5, 25, ev.wallJumped === 1 ? -1 : 1)
+      this.dust.puff(p.x + ev.wallJumped * (PLAYER.width / 2), p.y - PLAYER.height / 2, 5, 25, ev.wallJumped === 1 ? -1 : 1)
     }
     if (ev.grabbed) this.squash.set(0.9, 1.08)
     this.slideDust -= dt
     if (ev.wallSliding && this.slideDust <= 0) {
       this.slideDust = 0.07
-      this.dust.puff(p.x + ev.wallSliding * (PLAYER.size / 2), p.y - PLAYER.size * 0.6, 1, 8, ev.wallSliding === 1 ? -1 : 1)
+      this.dust.puff(p.x + ev.wallSliding * (PLAYER.width / 2), p.y - PLAYER.height * 0.6, 1, 8, ev.wallSliding === 1 ? -1 : 1)
     }
     if (ev.landed >= 0) { this.squash.land(ev.landed); this.dust.puff(p.x, p.y, 4 + Math.round(ev.landed * 8), 25 + ev.landed * 45) }
     const damage = fallDamage(ev.fell)
@@ -157,6 +162,8 @@ export class MainScene extends Phaser.Scene {
       this.health.heal(HEALTH.restRate * dt)
     }
     this.hurtFlash = Math.max(0, this.hurtFlash - dt)
+    if (p.grounded) this.walkPhase += Math.abs(p.vx) * dt * 0.2
+    this.updateFace(dt)
     this.syncHealth()
     if (ev.skidded) this.dust.puff(p.x - p.facing * 4, p.y, 3, 25, p.facing === 1 ? -1 : 1)
     this.squash.update(dt, p.grounded ? 0 : Math.max(0, p.vy) / PLAYER.maxFall)
@@ -170,7 +177,7 @@ export class MainScene extends Phaser.Scene {
   private followCamera(dt: number): void {
     const t = 1 - Math.exp(-(this.mode === 'returning' ? 5 : 8) * dt)
     this.cam.x += (this.player.x - this.cam.x) * t
-    this.cam.y += (this.player.y - PLAYER.size - this.cam.y) * t
+    this.cam.y += (this.player.y - PLAYER.height - this.cam.y) * t
     this.cameras.main.centerOn(this.cam.x, this.cam.y)
   }
 
@@ -186,11 +193,12 @@ export class MainScene extends Phaser.Scene {
     const dead = this.health.hurt(amount, 'dent', at)
     this.squash.set(1.35, 0.7) // the guide's getting-hurt squash
     this.hurtFlash = 0.1
+    this.hurtFace = 0.5
+    this.updateFace(0)
     this.dust.puff(p.x, p.y, 10, 60)
     this.syncHealth()
     if (dead) {
-      const w = this.body.width, h = this.body.height
-      this.shatter.burst(this.body.cells, w, h, p.x - w / 2, p.y - h)
+      this.shatter.burst(this.figureCells(), p.x, p.y - PLAYER.height / 2)
       this.setMode('dying')
     }
   }
@@ -198,11 +206,12 @@ export class MainScene extends Phaser.Scene {
   /** Jump pressed after dying: back to the start, whole, the body gathering together from cells. */
   private startReturn(): void {
     this.health.reset()
+    this.hurtFace = 0
+    this.updateFace(0)
     this.syncHealth()
     Object.assign(this.player, createPlayer(SPAWN.x, SPAWN.y))
     this.squash.set(1, 1)
-    const w = this.pristine.width, h = this.pristine.height
-    this.gather.start(this.pristine.cells, w, h, SPAWN.x - w / 2, SPAWN.y - h)
+    this.gather.start(this.figureCells())
     this.setMode('returning')
   }
 
@@ -213,19 +222,65 @@ export class MainScene extends Phaser.Scene {
     return y + 1
   }
 
-  /** Keeps the bar and the body's marks in step with health. */
+  /** Blinks every few seconds; a grimace for half a second after being hurt. */
+  private updateFace(dt: number): void {
+    this.hurtFace = Math.max(0, this.hurtFace - dt)
+    this.blinkIn -= dt
+    if (this.blinkIn <= 0) { this.blinkFor = 0.12; this.blinkIn = 2.5 + Math.random() * 2 }
+    this.blinkFor = Math.max(0, this.blinkFor - dt)
+    this.face = this.hurtFace > 0 ? 'hurt' : this.blinkFor > 0 ? 'blink' : 'open'
+  }
+
+  /** Keeps the bar, the face and the body's marks in step. */
   private syncHealth(): void {
     hud.set({ health: this.health.value })
-    const key = this.health.marks.map((m) => `${m.seed}:${Math.round(m.amount)}`).join(',')
-    if (key !== this.marksKey) {
-      this.marksKey = key
-      this.body = this.health.marks.length ? this.pristine.withMarks(this.health.marks, HEALTH.fallCap) : this.pristine
+    const key = this.face + '|' + this.health.marks.map((m) => `${m.seed}:${Math.round(m.amount)}`).join(',')
+    if (key !== this.bodyKey) {
+      this.bodyKey = key
+      const base = figureBody(this.face)
+      this.body = this.health.marks.length ? base.withMarks(this.health.marks, HEALTH.fallCap) : base
     }
+  }
+
+  private pose(): Pose {
+    const p = this.player
+    return {
+      walkPhase: this.walkPhase,
+      walking: p.grounded && Math.abs(p.vx) > 5,
+      airborne: !p.grounded && p.onWall === 0,
+      wall: p.onWall,
+      hurt: this.hurtFace > 0,
+      time: this.time.now / 1000,
+    }
+  }
+
+  /** The figure's parts, laid out where they're drawn: feet, then the (squashed) body, then hands. */
+  private layout() {
+    const p = this.player
+    const pose = this.pose()
+    const w = Math.max(4, Math.round(FIG.bodyW * this.squash.sx))
+    const h = Math.max(4, Math.round(FIG.bodyH * this.squash.sy))
+    const bodyBottom = p.y - FIG.footH - FIG.feetGap // the body stands on the gap above the feet
+    const left = p.x - w / 2
+    const top = bodyBottom - h
+    return { w, h, left, top, cells: this.body.resample(w, h), feet: feet(p.x, p.y, pose), hands: hands(p.x, top, h, pose) }
+  }
+
+  /** Every cell of the figure, where it is now (for the shatter and the gather). */
+  private figureCells(): CellPoint[] {
+    const L = this.layout()
+    const out: CellPoint[] = []
+    for (const f of L.feet) for (let y = 0; y < f.h; y++) for (let x = 0; x < f.w; x++) out.push({ x: Math.round(f.x) + x, y: Math.round(f.y) + y, cell: FOOT_CELL })
+    for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+      const c = L.cells[y * L.w + x]
+      if (c !== BodyCell.EMPTY) out.push({ x: L.left + x, y: L.top + y, cell: c })
+    }
+    for (const hnd of L.hands) for (const c of HAND_CELLS) out.push({ x: hnd.x + c.dx, y: hnd.y + c.dy, cell: c.cell })
+    return out
   }
 
   private draw(): void {
     const g = this.gfx
-    const p = this.player
     g.clear()
 
     // The stand-in rest spot: a pale strip on the floor that pulses gently.
@@ -263,23 +318,30 @@ export class MainScene extends Phaser.Scene {
     }
     if (this.mode !== 'alive') return
 
-    // The body, redrawn at its squashed size in whole cells, standing on its feet.
-    const w = Math.max(4, Math.round(PLAYER.size * this.squash.sx))
-    const h = Math.max(4, Math.round(PLAYER.size * this.squash.sy))
-    const cells = this.body.resample(w, h)
-    const left = p.x - w / 2
-    const top = p.y - h
-    for (let y = 0; y < h; y++) {
+    // The figure: floating feet, the body (redrawn at its squashed size in whole cells), floating hands.
+    const L = this.layout()
+    const flash = this.hurtFlash > 0
+    for (const f of L.feet) {
+      g.fillStyle(FOOT, 1)
+      g.fillRect(f.x, f.y, f.w, f.h)
+    }
+    for (let y = 0; y < L.h; y++) {
       let x = 0
-      while (x < w) {
-        const c = cells[y * w + x]
+      while (x < L.w) {
+        const c = L.cells[y * L.w + x]
         let run = 1
-        while (x + run < w && cells[y * w + x + run] === c) run++
+        while (x + run < L.w && L.cells[y * L.w + x + run] === c) run++
         if (c !== BodyCell.EMPTY) {
-          g.fillStyle(this.hurtFlash > 0 ? (c === BodyCell.INK ? INK : DAMAGE) : BODY_COLOURS[c], 1)
-          g.fillRect(left + x, top + y, run, 1)
+          g.fillStyle(flash ? (c === BodyCell.INK ? INK : DAMAGE) : BODY_COLOURS[c], 1)
+          g.fillRect(L.left + x, L.top + y, run, 1)
         }
         x += run
+      }
+    }
+    for (const hnd of L.hands) {
+      for (const c of HAND_CELLS) {
+        g.fillStyle(flash && c.cell === BodyCell.HERO ? DAMAGE : BODY_COLOURS[c.cell], 1)
+        g.fillRect(hnd.x + c.dx, hnd.y + c.dy, 1, 1)
       }
     }
   }

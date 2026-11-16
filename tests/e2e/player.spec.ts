@@ -12,14 +12,9 @@ async function ready(page: Page, url = './') {
   await expect.poll(async () => (await player(page)).grounded).toBe(true)
 }
 
-test('walks with the keyboard, jumps and double jumps with squash, stretch, dust and a ring', async ({ page }) => {
+test('jumps and double jumps with squash, stretch, dust and a ring, then walks with the keyboard', async ({ page }) => {
   await ready(page)
-  const start = await player(page)
-  await page.keyboard.down('KeyD')
-  await page.waitForTimeout(500)
-  await page.keyboard.up('KeyD')
-  expect((await player(page)).x).toBeGreaterThan(start.x + 10)
-
+  // Jump in the open by the start, clear of the low ledge's underside.
   await page.keyboard.down('Space')
   await expect.poll(async () => (await player(page)).sy).toBeGreaterThan(1.05)
   await expect.poll(async () => (await player(page)).dust).toBeGreaterThan(0)
@@ -31,6 +26,12 @@ test('walks with the keyboard, jumps and double jumps with squash, stretch, dust
   await expect.poll(async () => (await player(page)).rings).toBeGreaterThan(0)
   await page.keyboard.up('Space')
   await expect.poll(async () => (await player(page)).grounded, { timeout: 4000 }).toBe(true)
+
+  const start = await player(page)
+  await page.keyboard.down('KeyD')
+  await page.waitForTimeout(500)
+  await page.keyboard.up('KeyD')
+  expect((await player(page)).x).toBeGreaterThan(start.x + 10)
 })
 
 test('the thumbstick and Jump button work on a phone-sized screen', async ({ browser }) => {
@@ -78,7 +79,7 @@ test('at zero health the body shatters, the game waits for Jump, then the player
   await page.keyboard.up('KeyD')
   await page.evaluate(() => (window as unknown as { __hurt: (n: number) => void }).__hurt(100))
   await expect.poll(async () => (await player(page)).mode).toBe('dying')
-  expect((await player(page)).shards).toBeGreaterThan(100)
+  expect((await player(page)).shards).toBeGreaterThan(60)
   const prompt = page.getByRole('status')
   await expect(prompt).toHaveText('Press Jump to continue', { timeout: 3000 })
   await page.waitForTimeout(500)

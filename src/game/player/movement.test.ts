@@ -37,7 +37,7 @@ describe('walking and jumping', () => {
     expect(s.x).toBeGreaterThan(50 + PLAYER.walkSpeed * 0.9)
   })
 
-  test('a held jump rises about three body heights, a tapped one much less', () => {
+  test('a held jump rises about 36 cells, a tapped one much less', () => {
     const peak = (holdFor: number) => {
       const s = standing()
       let top = s.y
@@ -48,8 +48,8 @@ describe('walking and jumping', () => {
       return 100 - top
     }
     const full = peak(1), tap = peak(0.05)
-    expect(full).toBeGreaterThan(PLAYER.size * 2.6)
-    expect(full).toBeLessThan(PLAYER.size * 3.4)
+    expect(full).toBeGreaterThan(31) // about 36 cells: over twice the figure's height
+    expect(full).toBeLessThan(41)
     expect(tap).toBeLessThan(full * 0.5)
   })
 
@@ -78,7 +78,7 @@ describe('walking and jumping', () => {
 
     const w = standing(50, withWall)
     run(w, input({ move: 1 }), 1, withWall)
-    expect(w.x).toBeCloseTo(80 - PLAYER.size / 2, 5)
+    expect(w.x).toBeCloseTo(80 - PLAYER.width / 2, 5)
   })
 
   test('reports a landing with an impact that grows with the fall', () => {
@@ -110,7 +110,7 @@ describe('double jump', () => {
     run(s, idle, 0.03, withWall)
     expect(stepPlayer(s, input({ jump: true }), DT, withWall).doubleJumped).toBe(true)
     expect(s.airJumps).toBe(0)
-    s.x = 80 - PLAYER.size / 2 // now beside the wall, still in the air
+    s.x = 80 - PLAYER.width / 2 // now beside the wall, still in the air
     while (s.vy <= 0) stepPlayer(s, idle, DT, withWall)
     run(s, input({ move: 1 }), 0.2, withWall)
     expect(s.onWall).toBe(1)
@@ -121,7 +121,7 @@ describe('double jump', () => {
 describe('walls', () => {
   // Beside the wall, in the air, well above the floor.
   function nextToWall() {
-    const s = createPlayer(80 - PLAYER.size / 2, 60)
+    const s = createPlayer(80 - PLAYER.width / 2, 60)
     s.airJumps = 0
     return s
   }
@@ -164,7 +164,7 @@ describe('walls', () => {
   })
 
   test('a jump rising alongside a wall is not caught by it', () => {
-    const s = standing(80 - PLAYER.size / 2, withWall)
+    const s = standing(80 - PLAYER.width / 2, withWall)
     stepPlayer(s, input({ move: 1, jump: true }), DT, withWall)
     run(s, input({ move: 1, jump: true }), 0.2, withWall)
     expect(s.onWall).toBe(0)
@@ -197,7 +197,7 @@ describe('walls', () => {
     // rise, let go, and press again once back at the wall.
     let holdLeft = 0, released = true
     for (let t = 0; t < 3; t += DT) {
-      const near = s.x > 80 - PLAYER.size / 2 - PLAYER.wallJumpReach
+      const near = s.x > 80 - PLAYER.width / 2 - PLAYER.wallJumpReach
       let jump = false
       if (holdLeft > 0) { jump = true; holdLeft -= DT }
       else if (!released) released = true
@@ -205,7 +205,7 @@ describe('walls', () => {
       stepPlayer(s, input({ move: 1, jump }), DT, withWall)
       top = Math.min(top, s.y)
     }
-    expect(start - top).toBeGreaterThan(PLAYER.size * 4)
+    expect(start - top).toBeGreaterThan(48)
   })
 
   test('a wall jump also works from a cell or two away', () => {

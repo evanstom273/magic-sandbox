@@ -1,19 +1,18 @@
-import { PLAYER } from './tuning.ts'
-
 // Starting values for health, to tune in play.
 export const HEALTH = {
   max: 100,
-  safeFall: 6, // body heights fallen before it hurts (higher than a jump plus a double jump)
-  perHeight: 12, // damage per body height past that
+  // In cells, so falls hurt the same whatever the player's size: safe for 72 cells (4.5 of the
+  // 16-cell figure's heights; higher than a jump plus a double jump), then 1 a cell.
+  safeFall: 72,
+  perCell: 1,
   fallCap: 85, // one fall never takes more than this, so it can't kill from full health
   restRate: 40, // health a second while standing on the stand-in rest spot
 }
 
 /** Damage for a fall of `cells` cells. */
-export function fallDamage(cells: number, size: number = PLAYER.size): number {
-  const heights = cells / size
-  if (heights <= HEALTH.safeFall) return 0
-  return Math.min(HEALTH.fallCap, Math.round((heights - HEALTH.safeFall) * HEALTH.perHeight))
+export function fallDamage(cells: number): number {
+  if (cells <= HEALTH.safeFall) return 0
+  return Math.min(HEALTH.fallCap, Math.round((cells - HEALTH.safeFall) * HEALTH.perCell))
 }
 
 /** A mark on the body, where damage came from. `amount` is the health it stands for; it shrinks as health heals. */

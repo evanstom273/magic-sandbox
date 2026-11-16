@@ -45,11 +45,11 @@ export function createPlayer(x: number, y: number): PlayerState {
 
 const E = 1e-6
 
-/** Does a size × size box with its feet at (x, feet) overlap anything solid? */
-export function boxHits(solid: SolidAt, x: number, feet: number, size: number = PLAYER.size): boolean {
-  const half = size / 2
+/** Does the player's box, with its feet at (x, feet), overlap anything solid? */
+export function boxHits(solid: SolidAt, x: number, feet: number, w: number = PLAYER.width, h: number = PLAYER.height): boolean {
+  const half = w / 2
   const x0 = Math.floor(x - half + E), x1 = Math.floor(x + half - E)
-  const y0 = Math.floor(feet - size + E), y1 = Math.floor(feet - E)
+  const y0 = Math.floor(feet - h + E), y1 = Math.floor(feet - E)
   for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) if (solid(cx, cy)) return true
   return false
 }
@@ -58,10 +58,10 @@ export function boxHits(solid: SolidAt, x: number, feet: number, size: number = 
  * Is there wall beside the box on one side, `dist` cells out, across rows from `fromTop` to
  * `toTop` cells below the top of the box?
  */
-function wallBeside(solid: SolidAt, s: PlayerState, side: -1 | 1, dist: number, fromTop = 0, toTop: number = PLAYER.size - 1): boolean {
-  const half = PLAYER.size / 2
+function wallBeside(solid: SolidAt, s: PlayerState, side: -1 | 1, dist: number, fromTop = 0, toTop: number = PLAYER.height - 1): boolean {
+  const half = PLAYER.width / 2
   const col = side > 0 ? Math.floor(s.x + half - E) + dist : Math.floor(s.x - half + E) - dist
-  const top = Math.floor(s.y - PLAYER.size + E)
+  const top = Math.floor(s.y - PLAYER.height + E)
   for (let r = top + fromTop; r <= top + toTop; r++) if (solid(col, r)) return true
   return false
 }
@@ -174,7 +174,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
       }
       if (!climbed) {
         // Stop flush against the wall, not a fraction of a cell short of it.
-        const half = PLAYER.size / 2
+        const half = PLAYER.width / 2
         const flush = st > 0 ? Math.floor(nx + half - E) - half : Math.floor(nx - half + E) + 1 + half
         if (!boxHits(solid, flush, s.y)) s.x = flush
         s.vx = 0
@@ -196,7 +196,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     if (!boxHits(solid, s.x, ny)) s.y = ny
     else {
       // Stop flush on the floor or under the ceiling.
-      const flush = st > 0 ? Math.floor(ny - E) : Math.floor(ny - PLAYER.size + E) + 1 + PLAYER.size
+      const flush = st > 0 ? Math.floor(ny - E) : Math.floor(ny - PLAYER.height + E) + 1 + PLAYER.height
       if (!boxHits(solid, s.x, flush)) s.y = flush
       if (st > 0) s.grounded = true
       s.vy = 0

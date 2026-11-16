@@ -18,13 +18,13 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T21:06:53+00:00):**
+**Where the project stands (as of 2026-11-16T21:13:37+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): a Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`.
 - Magic Sandbox Artifact made; Fine cells chosen from it (History #34). Characters are voxels too (History #35).
-- **The player is in the game, as a blank square** (History #36–#40): a 12-cell body of real cells in a test room, with walking, jumping, squash and stretch and dust, playable with keyboard, gamepad and touch. Waiting on Lyra's playtest.
+- **The player is in the game, as a blank square** (History #36–#40): a 12-cell body of real cells in a test room, with walking, jumping, squash and stretch and dust, playable with keyboard, gamepad and touch. Since then: a double jump and Celeste-style wall climbing and wall jumps (History #41–#46). Waiting on Lyra's playtest.
 - Top-level design from Lyra (History #7–#13).
 - Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24); round 4 drawing elements in, shapes and triggers from the start, what catalysts do, and holding one at a time (History #25–#28). Shapes and casting types come from Lyra's Magic Mod (History #29, #30); round 5 settled how casting types fit, the starting triggers, and that weapons exist (History #31–#33).
 
@@ -169,6 +169,17 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Four triggers to start with** (all four picked): **on impact**, **after a delay**, **when something comes near** (a creature or the player), and **on recast** (cast again to set it off). *(2026-11-16T20:31:38+00:00 — History #32)*
 - **Weapons exist too,** alongside magic, and **Weapon enchantment enchants them.** Chosen over enchanting the catalyst (Claude's recommendation) and dropping the shape. What the weapons are is open. *(2026-11-16T20:31:38+00:00 — History #33)*
 
+### Player movement
+*Extra movement that doesn't need magic.*
+- **A double jump:** one extra jump in the air, with the guide's 0.8 × 1.22 stretch and a ring. Lyra's request. *(2026-11-16T21:13:37+00:00 — History #41)*
+- **Celeste-style walls:** **hold Grab** to cling to a wall and climb up and down it; push into a wall in the air to **slide** down it slowly; **jump off a wall** to kick away and up, with input unable to pull straight back for a moment; **jump while grabbing** with no direction to hop straight up the wall; climbing past the top **pops** the player up onto it. Lyra's request; hold to grab was Claude's recommendation, approved over automatic and toggle; the rest is Claude's plan, approved. *(2026-11-16T21:13:37+00:00 — History #42)*
+- **No stamina limit** on clinging and climbing. Chosen over Celeste-style stamina (Claude's recommendation). *(2026-11-16T21:13:37+00:00 — History #43)*
+- **The double jump comes back on landing or on a wall** (grabbing one or jumping off one). Chosen over landing only (Claude's recommendation). *(2026-11-16T21:13:37+00:00 — History #44)*
+
+### Platforms and input
+- **Touch: a fixed thumbstick** bottom left for moving and climbing, with **Jump** and a held **Grab** button bottom right. Claude's recommendation, approved over arrow buttons. *(2026-11-16T21:13:37+00:00 — History #45)*
+- **Keyboard and gamepad:** A/D or Left/Right to move; W/S or Up/Down to climb; **Space or K to jump** (W and Up no longer jump); **Shift or J to grab**. Gamepad: left stick or d-pad, A to jump, RB or RT to grab. Part of Claude's plan, approved. *(2026-11-16T21:13:37+00:00 — History #46)*
+
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
 - **The characters are in Lyra's Stylised Geometry style.** The world is voxels~~; how much of the guide applies to it is open (§E)~~, with Terraria's look (#11). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
@@ -246,8 +257,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 | Movement | Built | Walk; jump, higher the longer it's held; a tenth of a second to still jump after walking off a ledge, and a jump pressed just before landing still counts; walks up and down bumps up to 3 cells without jumping; stops flush against floors, walls and ceilings. All values in `src/game/player/tuning.ts`. *(2026-11-16T21:06:53+00:00)* |
 | Squash and stretch | Built | The guide's numbers: 0.72 × 1.32 on take-off, (1 + 0.4k) × (1 − 0.4k) on landing by impact, a slight stretch while falling, springing back with a little overshoot. Drawing only; the hitbox is always the plain square. *(2026-11-16T21:06:53+00:00)* |
 | Dust | Built | One-cell motes in the guide's dust colour, drifting and fading: a puff on take-off, a bigger one on harder landings, and a kick when turning sharply. *(2026-11-16T21:06:53+00:00)* |
-| Controls | Built | Keyboard (A/D or arrows; W, Up or Space to jump), gamepad (left stick or d-pad; A to jump), and touch buttons on phones and tablets (◀ ▶ bottom left, jump bottom right). *(2026-11-16T21:06:53+00:00)* |
-| Tests (player) | Passing | 12 unit tests (movement, squash, the cell body, dust) and Playwright driving the player with the keyboard and with the touch buttons on a phone-sized screen, plus the smoke test in development and as a Pages build. *(2026-11-16T21:06:53+00:00)* |
+| Double jump and walls | Built | One air jump, coming back on landing or on a wall, with a ring of cells. Hold Grab beside a wall (within a cell) to cling, with no time limit; climb up at 40 cells a second and down at 60; slide down a wall you're pushing into at up to 60. Wall jumps work from up to 2 cells away, grabbing or not, and lock input away from the wall for 0.16 s; a jump while grabbing with no direction away from the wall hops straight up; climbing past the top pops up onto the ledge. Dust trickles off the wall while sliding and puffs on wall jumps. *(2026-11-16T21:13:37+00:00)* |
+| Controls | Built | Keyboard: A/D or Left/Right move, W/S or Up/Down climb, Space or K jump, Shift or J grab. Gamepad: left stick or d-pad, A jump, RB or RT grab. Touch (phones and tablets): a fixed thumbstick bottom left, Grab and Jump bottom right. *(2026-11-16T21:13:37+00:00; first version 2026-11-16T21:06:53+00:00) *(2026-11-16T21:06:53+00:00)* |
+| Tests (player) | Passing | 19 unit tests (movement including double jump, wall slide, grab and climb, wall jump and its lock, climb jump and the ledge pop; squash; the cell body; dust) and Playwright driving the player with the keyboard (including a double jump) and with the thumbstick and Jump button on a phone-sized screen, plus the smoke test in development and as a Pages build. *(2026-11-16T21:06:53+00:00)* |
 | Tests (scaffold) | Passing | The Playwright smoke test passes in development and against a production build served from `/magic-sandbox/`, as on Pages, and was checked to fail when the scene throws. *(2026-11-16T20:07:36+00:00)* |
 | Deployment | Live | `.github/workflows/deploy.yml`: on every push to `main` (or run by hand from the Actions tab), builds with Node 24 and deploys `dist/` to GitHub Pages. The first deploy succeeded; the live site at https://evanstom273.github.io/magic-sandbox/ boots in a headless browser with one canvas filling the window and no errors. *(2026-11-16T20:00:02+00:00; first deploy 2026-11-16T20:08:26+00:00)* |
 
@@ -276,7 +288,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **How smooth movement and simulated bodies fit together (#38, #39):** each character has its own small grid of cells that moves smoothly; the world will act on whichever body cells it overlaps, and knocked-off cells will drop into the world as world cells.
 - **The player's starting values** are Claude's, to tune in play: walking at 66 cells a second (5.5 body widths); a full jump about 3 body heights; gravity 560 cells/s²; falls capped at 380 cells a second; squash spring stiffness 420, damping 24.
 - **The camera** draws a cell 3 to 6 screen pixels across, set from the screen size so the player is about 40–70 px tall, and follows smoothly within the room.
-- **The touch buttons** are hold buttons in the bottom corners, shown on touch screens (or with `?touch=1` in the address; `?touch=0` hides them). Platforms and input are still open (§E); they're there so the build can be played on the Fold.
+- **The touch controls** show on touch screens (or with `?touch=1` in the address; `?touch=0` hides them). ~~Hold buttons in the bottom corners~~ A thumbstick, Grab and Jump since #45. Platforms and input are otherwise still open (§E).
+- **Wall and double-jump values** are Claude's, to tune in play: double jump 180 cells a second (a little under the ground jump's 200); climbing 40 up and 60 down; wall slide capped at 60; wall jump 95 out and 190 up, locking input for 0.16 s; climb jump 185; the ledge pop 150 up and 45 across. The thumbstick ignores small nudges (under 30% across, 40% up or down) so walking doesn't climb by accident.
+- **The double jump's ring** is in the guide's pale dust colour rather than power blue, since this movement isn't magic. A small squash when grabbing a wall (0.9 × 1.08) and the double jump's stretch on climb jumps and ledge pops are Claude's additions.
 - **Testing hook:** in development the page exposes `window.__player()` for the browser tests; it's left out of production builds.
 - **The page has an empty icon** (`data:,`) so the browser doesn't ask for a missing `favicon.ico`. No icon has been designed.
 - **Vite's base path comes from the workflow.** The site is served from `/magic-sandbox/`, not the domain root, so the build gets `BASE_PATH` from Pages' own settings, and the scaffold's `vite.config` should read it (falling back to `/` locally). A custom domain later wouldn't need a code change.
@@ -330,6 +344,12 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 38 | 2026-11-16T21:06:53+00:00 | Art | Characters' cells are part of the simulation, not just drawn in cells. |
 | 39 | 2026-11-16T21:06:53+00:00 | Art | Characters move smoothly, not snapped to the world's grid. |
 | 40 | 2026-11-16T21:06:53+00:00 | Technical | Our own collision against the cell grid instead of Phaser Arcade (Claude's build plan, approved). |
+| 41 | 2026-11-16T21:13:37+00:00 | Player | A double jump (Lyra's request). |
+| 42 | 2026-11-16T21:13:37+00:00 | Player | Celeste-style walls: hold Grab to cling and climb, wall slide, wall jump, climb jump, ledge pop (hold to grab: Claude's recommendation, approved). |
+| 43 | 2026-11-16T21:13:37+00:00 | Player | No stamina limit on walls. |
+| 44 | 2026-11-16T21:13:37+00:00 | Player | The double jump comes back on landing or on a wall. |
+| 45 | 2026-11-16T21:13:37+00:00 | Platform | Touch: fixed thumbstick, Jump and Grab (Claude's recommendation, approved). |
+| 46 | 2026-11-16T21:13:37+00:00 | Platform | Keyboard: W/S climb, Space or K jump, Shift or J grab; gamepad RB/RT grab (Claude's plan, approved). |
 
 ---
 
@@ -344,8 +364,8 @@ Don't rush through the questions simply to get to implementation. The design pro
   - `src/game/scenes/MainScene.ts`: the one scene: the test room, the player, the camera, drawing.
   - `src/game/world/`: the cell grid, the test room and how it's painted.
   - `src/game/player/`: `tuning.ts` (every starting value), `movement.ts` (walking, jumping, collision), `squash.ts`, `body.ts` (the body's cells).
-  - `src/game/effects/dust.ts`: dust motes.
-  - `src/game/input/touchInput.ts` and `src/ui/TouchControls.tsx`: the touch buttons.
+  - `src/game/effects/`: dust motes (`dust.ts`) and rings (`rings.ts`).
+  - `src/game/input/touchInput.ts` and `src/ui/TouchControls.tsx`: the thumbstick and touch buttons.
   - `src/game/style/tokens.ts`: the style guide's colour tokens.
   - `tests/e2e/`: Playwright. `playwright.config.ts` starts both servers it tests against.
   - `vite.config.ts`: the Pages base path (`BASE_PATH`), Tailwind, and Vitest's settings.

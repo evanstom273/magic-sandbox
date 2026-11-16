@@ -12,11 +12,25 @@ export const PLAYER = {
   coyote: 0.1, // can still jump this long after walking off a ledge
   jumpBuffer: 0.12, // a jump pressed this long before landing still happens
   stepUp: 3, // walks up and down bumps this many cells high without jumping
+
+  // Extra movement (no magic).
+  airJumps: 1, // double jump; comes back on landing or on a wall
+  doubleJumpSpeed: 180,
+  wallSlideMax: 60, // fall speed while pushing into a wall
+  climbUpSpeed: 40,
+  climbDownSpeed: 60,
+  wallJumpSpeedX: 95,
+  wallJumpSpeedY: 190,
+  wallJumpLock: 0.16, // after a wall jump, input can't pull you straight back for this long
+  wallJumpReach: 2, // cells: how far from a wall a wall jump still works
+  climbJumpSpeed: 185, // a jump while grabbing with no direction: straight up the wall
+  ledgeHopSpeed: 150, // climbing past the top of a wall pops you up onto it
 } as const
 
 // The style guide's squash and stretch (§7.1), as a starting point.
 export const SQUASH = {
   jump: [0.72, 1.32] as const,
+  doubleJump: [0.8, 1.22] as const,
   landingStrength: 0.4, // landing is (1 + 0.4k) × (1 − 0.4k), k = impact 0–1
   fallStretch: 0.12, // extra vertical stretch at full fall speed
   stiffness: 420,

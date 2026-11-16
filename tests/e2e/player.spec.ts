@@ -3,17 +3,17 @@ import { expect, test, type Page } from '@playwright/test'
 // Drives the player through the dev build's window.__player hook (left out of production builds).
 test.skip(({ baseURL }) => !baseURL?.includes('5173'), 'needs the development build')
 
-type P = { x: number; y: number; grounded: boolean; sx: number; sy: number; dust: number }
+type P = { x: number; y: number; vy: number; grounded: boolean; airJumps: number; sx: number; sy: number; dust: number; rings: number }
 const player = (page: Page) => page.evaluate(() => (window as unknown as { __player: () => P }).__player())
 
-async function settle(page: Page) {
-  await page.goto('./')
+async function ready(page: Page, url = './') {
+  await page.goto(url)
   await page.waitForFunction(() => typeof (window as unknown as { __player?: unknown }).__player === 'function')
   await expect.poll(async () => (await player(page)).grounded).toBe(true)
 }
 
-test('walks with the keyboard and jumps with squash, stretch and dust', async ({ page }) => {
-  await settle(page)
+test('walks with the keyboard, jumps and double jumps with squash, stretch, dust and a ring', async ({ page }) => {
+  await ready(page)
   const start = await player(page)
   await page.keyboard.down('KeyD')
   await page.waitForTimeout(500)
@@ -23,27 +23,34 @@ test('walks with the keyboard and jumps with squash, stretch and dust', async ({
   await page.keyboard.down('Space')
   await expect.poll(async () => (await player(page)).sy).toBeGreaterThan(1.05)
   await expect.poll(async () => (await player(page)).dust).toBeGreaterThan(0)
-  await page.waitForTimeout(250)
+  await page.waitForTimeout(200)
   await page.keyboard.up('Space')
-  await expect.poll(async () => (await player(page)).grounded, { timeout: 3000 }).toBe(true)
+  await page.waitForTimeout(80)
+  await page.keyboard.down('Space')
+  await expect.poll(async () => (await player(page)).airJumps).toBe(0)
+  await expect.poll(async () => (await player(page)).rings).toBeGreaterThan(0)
+  await page.keyboard.up('Space')
+  await expect.poll(async () => (await player(page)).grounded, { timeout: 4000 }).toBe(true)
 })
 
-test('touch buttons move and jump on a phone-sized screen', async ({ browser }) => {
+test('the thumbstick and Jump button work on a phone-sized screen', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 412, height: 915 }, hasTouch: true, isMobile: true })
   const page = await context.newPage()
-  await page.goto('http://localhost:5173/?touch=1')
-  await page.waitForFunction(() => typeof (window as unknown as { __player?: unknown }).__player === 'function')
-  await expect.poll(async () => (await player(page)).grounded).toBe(true)
+  await ready(page, 'http://localhost:5173/?touch=1')
   const start = await player(page)
-  const right = page.getByRole('button', { name: 'Move right' })
-  const box = (await right.boundingBox())!
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  const stick = (await page.getByRole('slider', { name: 'Move and climb' }).boundingBox())!
+  const cx = stick.x + stick.width / 2, cy = stick.y + stick.height / 2
+  await page.mouse.move(cx, cy)
   await page.mouse.down()
+  await page.mouse.move(cx + 60, cy, { steps: 4 })
   await page.waitForTimeout(400)
   await page.mouse.up()
   expect((await player(page)).x).toBeGreaterThan(start.x + 8)
-  await page.getByRole('button', { name: 'Jump' }).dispatchEvent('pointerdown', { pointerId: 2 })
+
+  const jump = page.getByRole('button', { name: 'Jump' })
+  await jump.dispatchEvent('pointerdown', { pointerId: 7 })
   await expect.poll(async () => (await player(page)).grounded).toBe(false)
-  await page.getByRole('button', { name: 'Jump' }).dispatchEvent('pointerup', { pointerId: 2 })
+  await jump.dispatchEvent('pointerup', { pointerId: 7 })
+  await expect(page.getByRole('button', { name: 'Grab' })).toBeVisible()
   await context.close()
 })

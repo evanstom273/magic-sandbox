@@ -1,10 +1,11 @@
 import * as Phaser from 'phaser'
 import { Dust } from '../effects/dust.ts'
+import { Rings } from '../effects/rings.ts'
 import { touchInput } from '../input/touchInput.ts'
 import { BodyCell, CellBody } from '../player/body.ts'
 import { createPlayer, stepPlayer, type PlayerState } from '../player/movement.ts'
 import { Squash } from '../player/squash.ts'
-import { PLAYER } from '../player/tuning.ts'
+import { PLAYER, SQUASH } from '../player/tuning.ts'
 import { DUST, HERO, INK } from '../style/tokens.ts'
 import type { CellGrid } from '../world/grid.ts'
 import { buildTestRoom, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
@@ -18,6 +19,8 @@ export class MainScene extends Phaser.Scene {
   private body!: CellBody
   private squash = new Squash()
   private dust = new Dust()
+  private rings = new Rings()
+  private slideDust = 0
   private gfx!: Phaser.GameObjects.Graphics
   private keys!: Record<string, Phaser.Input.Keyboard.Key>
   private cam = { x: SPAWN.x, y: SPAWN.y }
@@ -39,7 +42,7 @@ export class MainScene extends Phaser.Scene {
     this.gfx = this.add.graphics()
     this.player = createPlayer(SPAWN.x, SPAWN.y)
     this.body = CellBody.square(PLAYER.size)
-    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = this.input.keyboard!.addKeys('A,D,W,S,LEFT,RIGHT,UP,DOWN,SPACE,K,SHIFT,J') as Record<string, Phaser.Input.Keyboard.Key>
 
     this.cameras.main.setBounds(0, 0, ROOM_W, ROOM_H)
     this.fitCamera()
@@ -47,7 +50,7 @@ export class MainScene extends Phaser.Scene {
 
     if (import.meta.env.DEV) {
       const w = window as unknown as Record<string, unknown>
-      w.__player = () => ({ ...this.player, sx: this.squash.sx, sy: this.squash.sy, dust: this.dust.motes.length })
+      w.__player = () => ({ ...this.player, sx: this.squash.sx, sy: this.squash.sy, dust: this.dust.motes.length, rings: this.rings.rings.length })
     }
   }
 
@@ -61,17 +64,23 @@ export class MainScene extends Phaser.Scene {
 
   private readInput() {
     const k = this.keys
-    let move = (k.D.isDown || k.RIGHT.isDown || touchInput.right ? 1 : 0) - (k.A.isDown || k.LEFT.isDown || touchInput.left ? 1 : 0)
-    let jump = k.W.isDown || k.UP.isDown || k.SPACE.isDown || touchInput.jump
+    let move = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0) || touchInput.moveX
+    let climb = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0) || touchInput.moveY
+    let jump = k.SPACE.isDown || k.K.isDown || touchInput.jump
+    let grab = k.SHIFT.isDown || k.J.isDown || touchInput.grab
     const pad = this.input.gamepad?.pad1
     if (pad) {
-      const sx = pad.leftStick.x
-      if (Math.abs(sx) > 0.25) move = sx
+      const { x, y } = pad.leftStick
+      if (Math.abs(x) > 0.3) move = x
+      if (Math.abs(y) > 0.4) climb = y
       if (pad.left) move = -1
       if (pad.right) move = 1
+      if (pad.up) climb = -1
+      if (pad.down) climb = 1
       if (pad.A) jump = true
+      if (pad.R1 > 0 || pad.R2 > 0.5) grab = true
     }
-    return { move, jump }
+    return { move, climb, jump, grab }
   }
 
   update(_time: number, deltaMs: number): void {
@@ -80,10 +89,23 @@ export class MainScene extends Phaser.Scene {
     const ev = stepPlayer(p, this.readInput(), dt, this.grid.isSolid)
 
     if (ev.jumped) { this.squash.jump(); this.dust.puff(p.x, p.y, 6, 30) }
+    if (ev.doubleJumped) { this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1]); this.rings.add(p.x, p.y, 3, 34, 0.28) }
+    if (ev.climbJumped || ev.ledgeHopped) this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1])
+    if (ev.wallJumped) {
+      this.squash.jump()
+      this.dust.puff(p.x + ev.wallJumped * (PLAYER.size / 2), p.y - PLAYER.size / 2, 5, 25, ev.wallJumped === 1 ? -1 : 1)
+    }
+    if (ev.grabbed) this.squash.set(0.9, 1.08)
+    this.slideDust -= dt
+    if (ev.wallSliding && this.slideDust <= 0) {
+      this.slideDust = 0.07
+      this.dust.puff(p.x + ev.wallSliding * (PLAYER.size / 2), p.y - PLAYER.size * 0.6, 1, 8, ev.wallSliding === 1 ? -1 : 1)
+    }
     if (ev.landed >= 0) { this.squash.land(ev.landed); this.dust.puff(p.x, p.y, 4 + Math.round(ev.landed * 8), 25 + ev.landed * 45) }
     if (ev.skidded) this.dust.puff(p.x - p.facing * 4, p.y, 3, 25, p.facing === 1 ? -1 : 1)
     this.squash.update(dt, p.grounded ? 0 : Math.max(0, p.vy) / PLAYER.maxFall)
     this.dust.update(dt)
+    this.rings.update(dt)
 
     // Camera follows smoothly.
     const t = 1 - Math.exp(-8 * dt)
@@ -102,6 +124,16 @@ export class MainScene extends Phaser.Scene {
     for (const m of this.dust.motes) {
       g.fillStyle(DUST, Math.min(1, (m.life / m.max) * 1.4))
       g.fillRect(m.x - 0.5, m.y - 0.5, 1, 1)
+    }
+
+    // Rings: an outline of cells that grows and fades.
+    for (const r of this.rings.rings) {
+      g.fillStyle(DUST, (r.life / r.max) * 0.9)
+      const n = Math.max(12, Math.round(r.r * 5))
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2
+        g.fillRect(Math.floor(r.x + Math.cos(a) * r.r), Math.floor(r.y + Math.sin(a) * r.r * 0.45), 1, 1)
+      }
     }
 
     // The body, redrawn at its squashed size in whole cells, standing on its feet.

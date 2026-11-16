@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T21:42:51+00:00):**
+**Where the project stands (as of 2026-11-16T21:44:11+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -189,6 +189,11 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Fall damage is moderate:** safe up to about 6 body heights (higher than a jump plus a double jump); damage grows quickly after that, and a long fall can take most of your health but doesn't kill outright. Claude's recommendation, approved over gentle and harsh. *(2026-11-16T21:42:51+00:00 — History #55)*
 - **Besides magic, falls are broken by catching a wall** (holding or sliding resets the fall), **landing in liquid** (cushions or cancels it) **and soft materials** such as sand (soften it, less than liquid). The double jump was not chosen, so it doesn't reset a fall. *(2026-11-16T21:42:51+00:00 — History #56)*
 
+- **Middling toughness:** a long fall takes most of your health; a few bad hits, or one real mistake (a swim in lava), ends you. Claude's recommendation, approved over sturdy and fragile. *(2026-11-16T21:44:11+00:00 — History #57)*
+- **Health comes back from resting, from things** (food, potions and other items) **and from magic** (healing as something you can cast, discovered like any other element). **Not over time:** there's no passive regeneration. *(2026-11-16T21:44:11+00:00 — History #58)*
+- **The marks mend as health refills:** dents fill out and eaten cells grow back, so the body and the bar keep agreeing. Claude's recommendation, approved over marks staying until rest. *(2026-11-16T21:44:11+00:00 — History #59)*
+- **What happens at zero health is decided later**, with the game's structure. For testing, the player respawns at the start. Claude's recommendation, approved. *(2026-11-16T21:44:11+00:00 — History #60)*
+
 ### Platforms and input
 - **Touch: a fixed thumbstick** bottom left for moving and climbing, with **Jump** ~~and a held **Grab** button~~ bottom right (no Grab since #47). Claude's recommendation, approved over arrow buttons. *(2026-11-16T21:13:37+00:00 — History #45)*
 - **Keyboard and gamepad:** A/D or Left/Right to move; ~~W/S or Up/Down to climb~~ (no climbing since #50); **Space or K to jump** ~~(W and Up no longer jump)~~ (W and Up jump again since #50); ~~**Shift or J to grab**~~. Gamepad: left stick or d-pad, A to jump~~, RB or RT to grab~~ (no grab since #47). Part of Claude's plan, approved. *(2026-11-16T21:13:37+00:00 — History #46)*
@@ -252,7 +257,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
 9. ~~**Cell size.**~~ Fine (#34). Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 10. **Weapons** (#33): what they are, how they sit beside magic (which was picked as the main way to fight in #14's options), and how they're got.
-11. **What losing body cells means** (#38): for the player and for everything else, once the world can burn or dissolve them. In design now: health shows as a bar and as the body deforming (#52); how much health there is, healing and death are still open.
+11. **What losing body cells means** (#38): for the player and for everything else, once the world can burn or dissolve them. Health is designed (#52–#60): a number shown as a bar, with marks on the body by kind of damage, mending as it heals. Still open: death (#60), and the actual numbers.
 
 ---
 
@@ -373,6 +378,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 54 | 2026-11-16T21:42:51+00:00 | Health | Deformation by kind of damage: falls and blows dent and crack; fire and acid eat cells away into the world (Claude's recommendation, approved). |
 | 55 | 2026-11-16T21:42:51+00:00 | Health | Moderate fall damage: safe to about 6 body heights, long falls take most health but don't kill outright (Claude's recommendation, approved). |
 | 56 | 2026-11-16T21:42:51+00:00 | Health | Falls are broken by walls, landing in liquid, and soft materials (and magic); not by the double jump. |
+| 57 | 2026-11-16T21:44:11+00:00 | Health | Middling toughness (Claude's recommendation, approved). |
+| 58 | 2026-11-16T21:44:11+00:00 | Health | Health comes back from resting, things and magic; no passive regeneration. |
+| 59 | 2026-11-16T21:44:11+00:00 | Health | Marks mend as health refills (Claude's recommendation, approved). |
+| 60 | 2026-11-16T21:44:11+00:00 | Health | Death decided later, with the game's structure; respawn at the start for testing (Claude's recommendation, approved). |
 
 ---
 

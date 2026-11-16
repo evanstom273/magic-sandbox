@@ -18,11 +18,13 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:31:38+00:00):**
+**Where the project stands (as of 2026-11-16T21:06:53+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
-- Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
+- Project scaffold built and tested (History #5, #6): a Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`.
+- Magic Sandbox Artifact made; Fine cells chosen from it (History #34). Characters are voxels too (History #35).
+- **The player is in the game, as a blank square** (History #36–#40): a 12-cell body of real cells in a test room, with walking, jumping, squash and stretch and dust, playable with keyboard, gamepad and touch. Waiting on Lyra's playtest.
 - Top-level design from Lyra (History #7–#13).
 - Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24); round 4 drawing elements in, shapes and triggers from the start, what catalysts do, and holding one at a time (History #25–#28). Shapes and casting types come from Lyra's Magic Mod (History #29, #30); round 5 settled how casting types fit, the starting triggers, and that weapons exist (History #31–#33).
 
@@ -172,16 +174,21 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **The characters are in Lyra's Stylised Geometry style.** The world is voxels~~; how much of the guide applies to it is open (§E)~~, with Terraria's look (#11). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
 - **Cell size: Fine** ("All day long"), from the Magic Sandbox: the room is 320 × 180 cells and the stand-in caster about 8 cells wide. Chosen over Medium and Chunky. *(2026-11-16T20:59:12+00:00 — History #34)*
 - **Characters are made of voxels too**, keeping the Stylised Geometry character style: the player, NPCs and every other character are drawn in cells like the world. Lyra's idea. *(2026-11-16T20:59:12+00:00 — History #35)*
+- **Characters are 12 cells across**, so the style's proportions survive in cells (eyes about 2 × 3 cells, hands 2, a one-cell outline). The player is 1.5 times the sandbox caster's size against the world. Claude's recommendation, approved over 8 and 16. *(2026-11-16T21:06:53+00:00 — History #37)*
+- **Characters' cells are part of the simulation.** Bodies are real cells the world acts on (burnt or dissolved cell by cell, chunks knocked off), not just drawn in cells. Chosen over drawn-only (Claude's recommendation). *(2026-11-16T21:06:53+00:00 — History #38)*
+- **Characters move smoothly,** positioned between the world's cells rather than snapping to its grid; their cells are the world's size but don't line up with it. Chosen over snapping (Claude's recommendation). *(2026-11-16T21:06:53+00:00 — History #39)*
 - **The style guide is a guide, not gospel.** Lyra, restating it for this game: it informs the look, it doesn't set rules the game has to follow. *(2026-11-16T20:13:02+00:00, documentation time — History #13)*
 
 ### Technical architecture / platform
 - **Stack: the same as the stealth game's.** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js; React as the outer shell with Phaser running inside one React component, Phaser 4, and Dexie added when there's first something to save. *(2026-11-16T20:00:02+00:00, documentation time — History #3)*
 - **Deployed on GitHub Pages, for now**, instead of the stealth game's Cloudflare Workers. Lyra has activated Pages in the repository settings. *(2026-11-16T20:00:02+00:00, documentation time — History #4)*
 
+- **Collision is our own, against the cell grid,** not Phaser's built-in Arcade physics, because the world is made of cells. Part of Claude's build plan for the player, approved. *(2026-11-16T21:06:53+00:00 — History #40)*
+
 ### Development approach
 - **The scaffold was approved as proposed** (Lyra: "Yes scaffold"): the stealth game's, without Cloudflare. Strict TypeScript, Tailwind, Phaser 4 with one empty scene inside a React component, and the guide's colour tokens; no Dexie until something needs saving. *(2026-11-16T20:07:36+00:00, documentation time — History #5)*
 
-- **First piece in the game: just the player.** A blank square with movement, jumping, squash and stretch and the style's particles, before anything else. *(2026-11-16T20:59:12+00:00 — History #36)*
+- **First piece in the game: just the player.** A blank square with movement, jumping, squash and stretch and the style's particles, before anything else. Built (§F). *(2026-11-16T20:59:12+00:00 — History #36)*
 
 ### Testing
 - **Vitest for logic, plus a Playwright smoke test** that boots the game in a real browser and fails if the canvas doesn't appear or anything errors. The same as the stealth game's; Claude's recommendation, approved with the scaffold. *(2026-11-16T20:07:36+00:00, documentation time — History #6)*
@@ -221,23 +228,33 @@ Don't rush through the questions simply to get to implementation. The design pro
 8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
 9. ~~**Cell size.**~~ Fine (#34). Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 10. **Weapons** (#33): what they are, how they sit beside magic (which was picked as the main way to fight in #14's options), and how they're got.
+11. **What losing body cells means** (#38): for the player and for everything else, once the world can burn or dissolve them. Health, damage and death aren't designed.
 
 ---
 
 ## F. Implementation Status
 
-*Updated 2026-11-16T20:07:36+00:00.*
+*Updated 2026-11-16T21:06:53+00:00.*
 
 | Feature | Status | Notes |
 |---|---|---|
 | Design doc | Done | `GAME_DESIGN.md`, reset to the base of `STEALTH_GAME_DESIGN.md`. *(2026-11-16T19:56:10+00:00)* |
 | Art style reference | Added | `stylised-geometry/`, unpacked from `stylised-geometry.zip` as supplied, with Lyra's `make_sheets.py` in `sheets/`. Checked: the script regenerates all seven sheets byte for byte. *(2026-11-16T19:56:10+00:00)* |
 | Project scaffold | Done | Vite 8, React 19, TypeScript 7 (strict), Tailwind v4, Phaser 4.2.1. One empty scene filling the window; the style guide's colour tokens in `src/game/style/tokens.ts`. Typecheck, lint and build pass; the build's asset paths point under `/magic-sandbox/`. *(2026-11-16T20:07:36+00:00)* |
-| Tests | Passing | Vitest is set up with no tests yet (there's no logic to test). The Playwright smoke test passes in development and against a production build served from `/magic-sandbox/`, as on Pages, and was checked to fail when the scene throws. *(2026-11-16T20:07:36+00:00)* |
+| Test room | Built | 320 × 180 Fine cells, static for now (no simulation yet): a bumpy floor, a low and a high ledge, a wall and a low step, in placeholder colours with a lighter top edge on everything standable. `src/game/world/`. *(2026-11-16T21:06:53+00:00)* |
+| The player, in the game | Built | A blank square, 12 × 12 cells, drawn as real cells: a one-cell ink outline around white (`src/game/player/body.ts`). It moves smoothly and is redrawn in whole cells each frame for squash and stretch, which keeps the outline on all four sides. No face, hands or feet yet. *(2026-11-16T21:06:53+00:00)* |
+| Movement | Built | Walk; jump, higher the longer it's held; a tenth of a second to still jump after walking off a ledge, and a jump pressed just before landing still counts; walks up and down bumps up to 3 cells without jumping; stops flush against floors, walls and ceilings. All values in `src/game/player/tuning.ts`. *(2026-11-16T21:06:53+00:00)* |
+| Squash and stretch | Built | The guide's numbers: 0.72 × 1.32 on take-off, (1 + 0.4k) × (1 − 0.4k) on landing by impact, a slight stretch while falling, springing back with a little overshoot. Drawing only; the hitbox is always the plain square. *(2026-11-16T21:06:53+00:00)* |
+| Dust | Built | One-cell motes in the guide's dust colour, drifting and fading: a puff on take-off, a bigger one on harder landings, and a kick when turning sharply. *(2026-11-16T21:06:53+00:00)* |
+| Controls | Built | Keyboard (A/D or arrows; W, Up or Space to jump), gamepad (left stick or d-pad; A to jump), and touch buttons on phones and tablets (◀ ▶ bottom left, jump bottom right). *(2026-11-16T21:06:53+00:00)* |
+| Tests (player) | Passing | 12 unit tests (movement, squash, the cell body, dust) and Playwright driving the player with the keyboard and with the touch buttons on a phone-sized screen, plus the smoke test in development and as a Pages build. *(2026-11-16T21:06:53+00:00)* |
+| Tests (scaffold) | Passing | The Playwright smoke test passes in development and against a production build served from `/magic-sandbox/`, as on Pages, and was checked to fail when the scene throws. *(2026-11-16T20:07:36+00:00)* |
 | Deployment | Live | `.github/workflows/deploy.yml`: on every push to `main` (or run by hand from the Actions tab), builds with Node 24 and deploys `dist/` to GitHub Pages. The first deploy succeeded; the live site at https://evanstom273.github.io/magic-sandbox/ boots in a headless browser with one canvas filling the window and no errors. *(2026-11-16T20:00:02+00:00; first deploy 2026-11-16T20:08:26+00:00)* |
 
 ### Known issues and limitations
-- **Only tested in a headless browser** so far, which renders on the CPU. Nothing has been checked on a real phone, but there's nothing on screen to check yet.
+- **Only tested in a headless browser** so far, which renders on the CPU. Feel and frame rate on the Fold are unknown until Lyra plays it.
+- **Cells can look slightly uneven on high-density screens.** The canvas is drawn at CSS-pixel size and scaled up without blurring, so a cell that's, say, 3.8 screen pixels across is drawn 3 or 4 pixels wide. Drawing at the screen's full density would fix it.
+- **The body isn't simulated yet** (#38): there's no simulation in the game for it to be part of. It's built as real cells, ready for the world.
 
 ### Implementation interpretations (technical, not design decisions — flag if wrong)
 - **The art style zip was committed unpacked**, as the `stylised-geometry/` folder rather than the `.zip` itself, since the guide is written to be copied into a project as a folder. `make_sheets.py` went into `sheets/`, where the guide says it lives. Same as in the stealth game.
@@ -256,6 +273,11 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Elden Ring-style catalysts (#23)** are read as: a held item that lets the player cast and shapes how they cast, like Elden Ring's staffs and sacred seals, with spells kept separately on the hotbar (#18) rather than stored inside the catalyst as in Noita's wands. ~~Flag if wrong.~~ Confirmed by Lyra's note in #27: any spell can be cast from any catalyst.
 - **The debug/cheat menu (#24)** is taken to give any element, shape or trigger at will. Whether players get it in the finished game, or it's only for development, hasn't been said.
 - **"The cast shapes and shit" (#29, #30)** is read as the Magic Mod's spell types (as shapes) and its casting types. Nothing else from the Magic Mod's design is carried over; it's a different game with handcrafted spells. Claude's reading of the shapes, from how the Magic Mod's spells use them: Self acts on the caster; Target acts directly on what's aimed at; Rune is placed on a surface and goes off later; Orbit circles the caster; Wave spreads outward from the caster in rings; Summon calls up something that acts on its own.
+- **How smooth movement and simulated bodies fit together (#38, #39):** each character has its own small grid of cells that moves smoothly; the world will act on whichever body cells it overlaps, and knocked-off cells will drop into the world as world cells.
+- **The player's starting values** are Claude's, to tune in play: walking at 66 cells a second (5.5 body widths); a full jump about 3 body heights; gravity 560 cells/s²; falls capped at 380 cells a second; squash spring stiffness 420, damping 24.
+- **The camera** draws a cell 3 to 6 screen pixels across, set from the screen size so the player is about 40–70 px tall, and follows smoothly within the room.
+- **The touch buttons** are hold buttons in the bottom corners, shown on touch screens (or with `?touch=1` in the address; `?touch=0` hides them). Platforms and input are still open (§E); they're there so the build can be played on the Fold.
+- **Testing hook:** in development the page exposes `window.__player()` for the browser tests; it's left out of production builds.
 - **The page has an empty icon** (`data:,`) so the browser doesn't ask for a missing `favicon.ico`. No icon has been designed.
 - **Vite's base path comes from the workflow.** The site is served from `/magic-sandbox/`, not the domain root, so the build gets `BASE_PATH` from Pages' own settings, and the scaffold's `vite.config` should read it (falling back to `/` locally). A custom domain later wouldn't need a code change.
 - **Pages must deploy from GitHub Actions** (Settings → Pages → Source). ~~Claude can't see the repository settings, so this is unconfirmed.~~ Confirmed by the first deploy going live.
@@ -304,6 +326,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 34 | 2026-11-16T20:59:12+00:00 | World | Cell size: Fine (from the Magic Sandbox). |
 | 35 | 2026-11-16T20:59:12+00:00 | Art | Characters (player, NPCs, everything) are made of voxels too, in the Stylised Geometry style (Lyra's idea). |
 | 36 | 2026-11-16T20:59:12+00:00 | Workflow | First piece in the game: just the player, a blank square with movement, jumping, squash and stretch and particles. |
+| 37 | 2026-11-16T21:06:53+00:00 | Art | Characters are 12 cells across (Claude's recommendation, approved). |
+| 38 | 2026-11-16T21:06:53+00:00 | Art | Characters' cells are part of the simulation, not just drawn in cells. |
+| 39 | 2026-11-16T21:06:53+00:00 | Art | Characters move smoothly, not snapped to the world's grid. |
+| 40 | 2026-11-16T21:06:53+00:00 | Technical | Our own collision against the cell grid instead of Phaser Arcade (Claude's build plan, approved). |
 
 ---
 
@@ -315,7 +341,11 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Deployment:** `.github/workflows/deploy.yml` builds (`npm ci`, `npm run build` with `BASE_PATH` set) and deploys `dist/` to GitHub Pages on every push to `main`. Pages' source has to be set to GitHub Actions.
 - **Project layout:**
   - `src/App.tsx`: the React shell. `src/game/PhaserGame.tsx` holds the canvas; `src/game/createGame.ts` configures Phaser.
-  - `src/game/scenes/MainScene.ts`: the one scene, empty for now.
+  - `src/game/scenes/MainScene.ts`: the one scene: the test room, the player, the camera, drawing.
+  - `src/game/world/`: the cell grid, the test room and how it's painted.
+  - `src/game/player/`: `tuning.ts` (every starting value), `movement.ts` (walking, jumping, collision), `squash.ts`, `body.ts` (the body's cells).
+  - `src/game/effects/dust.ts`: dust motes.
+  - `src/game/input/touchInput.ts` and `src/ui/TouchControls.tsx`: the touch buttons.
   - `src/game/style/tokens.ts`: the style guide's colour tokens.
   - `tests/e2e/`: Playwright. `playwright.config.ts` starts both servers it tests against.
   - `vite.config.ts`: the Pages base path (`BASE_PATH`), Tailwind, and Vitest's settings.

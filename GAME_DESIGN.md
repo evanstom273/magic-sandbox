@@ -18,11 +18,12 @@ Authoritative, living record of the game's design. It's updated after everything
 
 *Not decided yet: what the game is, who the player is, and what it's called.* The repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:00:02+00:00):**
+**Where the project stands (as of 2026-11-16T20:07:36+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
-- Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4). The deploy workflow is in, with nothing to deploy until the project is scaffolded.
-- Nothing designed or built yet.
+- Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
+- Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
+- Next: Lyra explains the top-level design decisions, then rounds of questions expand them.
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -146,6 +147,12 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Stack: the same as the stealth game's.** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js; React as the outer shell with Phaser running inside one React component, Phaser 4, and Dexie added when there's first something to save. *(2026-11-16T20:00:02+00:00, documentation time — History #3)*
 - **Deployed on GitHub Pages, for now**, instead of the stealth game's Cloudflare Workers. Lyra has activated Pages in the repository settings. *(2026-11-16T20:00:02+00:00, documentation time — History #4)*
 
+### Development approach
+- **The scaffold was approved as proposed** (Lyra: "Yes scaffold"): the stealth game's, without Cloudflare. Strict TypeScript, Tailwind, Phaser 4 with one empty scene inside a React component, and the guide's colour tokens; no Dexie until something needs saving. *(2026-11-16T20:07:36+00:00, documentation time — History #5)*
+
+### Testing
+- **Vitest for logic, plus a Playwright smoke test** that boots the game in a real browser and fails if the canvas doesn't appear or anything errors. The same as the stealth game's; Claude's recommendation, approved with the scaffold. *(2026-11-16T20:07:36+00:00, documentation time — History #6)*
+
 ### Documentation
 - **Living `GAME_DESIGN.md`**, reset to the base of `STEALTH_GAME_DESIGN.md`: the same structure and conventions, updated after everything, with none of the stealth game's design. *(2026-11-16T19:56:10+00:00, documentation time — History #1)*
 
@@ -153,7 +160,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-Nothing in design yet. Stack and deployment are settled (#3, #4), and the GitHub Pages workflow is in, waiting for a project scaffold to build.
+Nothing in design yet. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F). Next, Lyra explains the top-level design decisions, then rounds of questions expand them.
 
 **Artifacts:** none yet.
 
@@ -178,25 +185,36 @@ Nothing in design yet. Stack and deployment are settled (#3, #4), and the GitHub
 
 ## F. Implementation Status
 
-*Updated 2026-11-16T20:00:02+00:00.*
+*Updated 2026-11-16T20:07:36+00:00.*
 
 | Feature | Status | Notes |
 |---|---|---|
 | Design doc | Done | `GAME_DESIGN.md`, reset to the base of `STEALTH_GAME_DESIGN.md`. *(2026-11-16T19:56:10+00:00)* |
 | Art style reference | Added | `stylised-geometry/`, unpacked from `stylised-geometry.zip` as supplied, with Lyra's `make_sheets.py` in `sheets/`. Checked: the script regenerates all seven sheets byte for byte. *(2026-11-16T19:56:10+00:00)* |
-| Deployment workflow | Added, idle until there's an app | `.github/workflows/deploy.yml`: on every push to `main` (or run by hand from the Actions tab), builds with Node 24 and deploys `dist/` to GitHub Pages. While there's no `package.json` it skips the build and deploy instead of failing. Hasn't deployed anything yet. *(2026-11-16T20:00:02+00:00)* |
+| Project scaffold | Done | Vite 8, React 19, TypeScript 7 (strict), Tailwind v4, Phaser 4.2.1. One empty scene filling the window; the style guide's colour tokens in `src/game/style/tokens.ts`. Typecheck, lint and build pass; the build's asset paths point under `/magic-sandbox/`. *(2026-11-16T20:07:36+00:00)* |
+| Tests | Passing | Vitest is set up with no tests yet (there's no logic to test). The Playwright smoke test passes in development and against a production build served from `/magic-sandbox/`, as on Pages, and was checked to fail when the scene throws. *(2026-11-16T20:07:36+00:00)* |
+| Deployment | Live | `.github/workflows/deploy.yml`: on every push to `main` (or run by hand from the Actions tab), builds with Node 24 and deploys `dist/` to GitHub Pages. The first deploy succeeded; the live site at https://evanstom273.github.io/magic-sandbox/ boots in a headless browser with one canvas filling the window and no errors. *(2026-11-16T20:00:02+00:00; first deploy 2026-11-16T20:08:26+00:00)* |
 
 ### Known issues and limitations
-- None yet.
+- **Only tested in a headless browser** so far, which renders on the CPU. Nothing has been checked on a real phone, but there's nothing on screen to check yet.
 
 ### Implementation interpretations (technical, not design decisions — flag if wrong)
 - **The art style zip was committed unpacked**, as the `stylised-geometry/` folder rather than the `.zip` itself, since the guide is written to be copied into a project as a folder. `make_sheets.py` went into `sheets/`, where the guide says it lives. Same as in the stealth game.
 - **The document is named `GAME_DESIGN.md`**, the name the stealth game's design doc started with, until this game has a name of its own.
 - **Carried over from `STEALTH_GAME_DESIGN.md` rather than decided for this project:** the style guide being a reference, not gospel; the guiding principles and Lyra's three workflow sections in §A (with the document's name in her words changed to `GAME_DESIGN.md`); and the "explain before adding" and merge-to-`main` standing orders in §H. Everything else, from the stealth game's concept to its stack, was left behind.
 - **"Basically the same" stack** is read as including how the stealth game's parts fit together (its History #7–#9): React as the shell with Phaser in one component, Phaser 4, and Dexie only once something needs saving. Its testing setup (Vitest, plus a Playwright smoke test) isn't recorded as decided here.
-- **The workflow skips cleanly while there's no `package.json`**, so pushes to `main` don't pile up failed runs before the scaffold exists. The check can come out once the scaffold is in.
+- ~~**The workflow skips cleanly while there's no `package.json`**, so pushes to `main` don't pile up failed runs before the scaffold exists. The check can come out once the scaffold is in.~~ Taken out with the scaffold.
+- **Linter: oxlint**, which Vite's template ships now, as in the stealth game.
+- **TypeScript 7** is what Vite's template ships now (the Go-based compiler). `strict` is set explicitly in every tsconfig. The Playwright tests have their own tsconfig (`tsconfig.e2e.json`), since code they run in the page needs the browser's types.
+- **Colour tokens** cover the whole colour-jobs table in the guide's §5.1, so they include power-light (`#cfeaff`) and hot tell (`#fff0d8`) as well as the seven in §12.4. The guide's light, squash and hit-stop numbers are left out until something moves, because they were tuned for a platformer. The backdrop (`#14141c`) is a placeholder from the reference sheets until the game has a world palette.
+- **The canvas fills the window** and follows it when it changes size (Phaser's `RESIZE` mode), at one canvas pixel per CSS pixel. No resolution, aspect ratio or handling of high-density screens has been decided; the stealth game needed its own for the Fold.
+- **No physics configured yet.** The stealth game used Phaser Arcade; that was a decision for that game, so it waits for this one's design.
+- **The smoke test runs twice:** against the development server, and against a production build served from `/magic-sandbox/`, which is how Pages serves it, so a broken base path fails the test.
+- **Vite's 500 kB chunk-size warning is raised to 2 MB**, because Phaser alone is about 1.5 MB minified (about 425 kB gzipped) and would trip it on every build.
+- **`@playwright/test` is pinned to 1.63.0**, to match the browser installed in Claude's cloud environment. On a new machine, `npx playwright install chromium` fetches the matching browser.
+- **The page has an empty icon** (`data:,`) so the browser doesn't ask for a missing `favicon.ico`. No icon has been designed.
 - **Vite's base path comes from the workflow.** The site is served from `/magic-sandbox/`, not the domain root, so the build gets `BASE_PATH` from Pages' own settings, and the scaffold's `vite.config` should read it (falling back to `/` locally). A custom domain later wouldn't need a code change.
-- **Pages must deploy from GitHub Actions** (Settings → Pages → Source). Claude can't see the repository settings, so this is unconfirmed.
+- **Pages must deploy from GitHub Actions** (Settings → Pages → Source). ~~Claude can't see the repository settings, so this is unconfirmed.~~ Confirmed by the first deploy going live.
 
 ---
 
@@ -210,6 +228,8 @@ Nothing in design yet. Stack and deployment are settled (#3, #4), and the GitHub
 | 2 | 2026-11-16T19:56:10+00:00 *(documentation time)* | Art | Art style: Stylised Geometry (`stylised-geometry/`). |
 | 3 | 2026-11-16T20:00:02+00:00 *(documentation time)* | Technical | Stack: the same as the stealth game's (React, Vite, TypeScript, Tailwind CSS, Phaser 4, IndexedDB via Dexie.js; React shell, Phaser in one component, Dexie when first needed). |
 | 4 | 2026-11-16T20:00:02+00:00 *(documentation time)* | Deployment | Deployed on GitHub Pages for now, instead of Cloudflare Workers. Pages activated by Lyra. |
+| 5 | 2026-11-16T20:07:36+00:00 *(documentation time)* | Workflow | Scaffold approved as proposed: the stealth game's, without Cloudflare. |
+| 6 | 2026-11-16T20:07:36+00:00 *(documentation time)* | Testing | Vitest for logic, plus a Playwright smoke test that boots the game in a real browser (Claude's recommendation, approved). |
 
 ---
 
@@ -217,8 +237,14 @@ Nothing in design yet. Stack and deployment are settled (#3, #4), and the GitHub
 
 - **Repository:** `evanstom273/magic-sandbox`. Working branch `ccr-0ed275cd-237irz`.
 - **Art style reference:** `stylised-geometry/STYLISED_GEOMETRY.md` and `stylised-geometry/sheets/01-anatomy.svg` to `07-colour.svg`, regenerated by `stylised-geometry/sheets/make_sheets.py` (Python standard library only; takes the output folder as its one argument). The guide was developed in a side-on platformer; rules it marks **(untested)** haven't been through a real game yet.
-- **Live site:** https://evanstom273.github.io/magic-sandbox/, once something's been deployed.
+- **Live site:** https://evanstom273.github.io/magic-sandbox/
 - **Deployment:** `.github/workflows/deploy.yml` builds (`npm ci`, `npm run build` with `BASE_PATH` set) and deploys `dist/` to GitHub Pages on every push to `main`. Pages' source has to be set to GitHub Actions.
-- **Project layout:** nothing yet beyond this document, the deploy workflow, the art style reference and the README.
+- **Project layout:**
+  - `src/App.tsx`: the React shell. `src/game/PhaserGame.tsx` holds the canvas; `src/game/createGame.ts` configures Phaser.
+  - `src/game/scenes/MainScene.ts`: the one scene, empty for now.
+  - `src/game/style/tokens.ts`: the style guide's colour tokens.
+  - `tests/e2e/`: Playwright. `playwright.config.ts` starts both servers it tests against.
+  - `vite.config.ts`: the Pages base path (`BASE_PATH`), Tailwind, and Vitest's settings.
+  - Commands are in the README.
 - **Explain before adding** *(carried over from Lyra's previous design documents)*: before building anything, Claude says what it's about to add and how, then waits for the go-ahead.
 - **Workflow** *(Lyra's standing order across all her projects)*: after committing to the working branch, always merge straight to `main` as well; no need to ask each time.

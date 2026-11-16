@@ -7,7 +7,8 @@ export function Hotbar() {
   const { slots, activeSlot, charge } = useSyncExternalStore(hud.subscribe, hud.get)
   if (!slots.length) return null
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[max(12px,env(safe-area-inset-top))] flex justify-center px-[max(16px,env(safe-area-inset-left))]">
+    // On narrow screens it drops to a row of its own under the health and mana bars.
+    <div className="pointer-events-none absolute inset-x-0 top-[max(12px,env(safe-area-inset-top))] flex justify-center px-[max(16px,env(safe-area-inset-left))] max-[700px]:top-[calc(max(16px,env(safe-area-inset-top))+48px)]">
       <ol className="pointer-events-auto flex gap-1.5" aria-label="Spells">
         {slots.map((s, i) => (
           <li key={i}>

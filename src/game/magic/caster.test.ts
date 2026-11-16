@@ -95,3 +95,25 @@ describe('the spell model', () => {
     expect(castCost(one, 1.6)).toBeGreaterThan(castCost(one, 1))
   })
 })
+
+describe('building spells', () => {
+  test('elements toggle in and out, a third replaces the oldest, and a spell keeps at least one', async () => {
+    const { toggleElement } = await import('./spells.ts')
+    let s: Spell = { elements: ['water'], shape: 'projectile', cast: 'instant' }
+    s = toggleElement(s, 'heat')
+    expect(s.elements).toEqual(['water', 'heat'])
+    s = toggleElement(s, 'cold')
+    expect(s.elements).toEqual(['heat', 'cold'])
+    s = toggleElement(s, 'heat')
+    expect(s.elements).toEqual(['cold'])
+    expect(toggleElement(s, 'cold').elements).toEqual(['cold'])
+  })
+
+  test('changing shape keeps the casting type if it can, otherwise takes the shape\'s first', async () => {
+    const { withShape } = await import('./spells.ts')
+    const charged: Spell = { elements: ['water'], shape: 'projectile', cast: 'charged' }
+    expect(withShape(charged, 'aoe').cast).toBe('charged')
+    expect(withShape(charged, 'beam').cast).toBe('channeled')
+    expect(withShape(charged, 'enchant')).toBe(charged) // can't pick Weapon enchantment yet
+  })
+})

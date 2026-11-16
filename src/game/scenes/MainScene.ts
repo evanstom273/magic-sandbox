@@ -7,7 +7,7 @@ import { Dummy } from '../magic/dummies.ts'
 import { Magic, type Body } from '../magic/effects.ts'
 import { DEFAULT_HOTBAR, describe } from '../magic/hotbar.ts'
 import { elementInfo, Mana, type Spell } from '../magic/spells.ts'
-import { hud } from '../bridge.ts'
+import { hud, spellEdits } from '../bridge.ts'
 import { touchInput } from '../input/touchInput.ts'
 import { BodyCell, type CellBody } from '../player/body.ts'
 import { feet, FIG, figureBody, HAND_CELLS, hands, type Face, type Pose } from '../player/figure.ts'
@@ -78,7 +78,7 @@ export class MainScene extends Phaser.Scene {
     this.player = createPlayer(SPAWN.x, SPAWN.y)
     this.body = figureBody('open')
     hud.set({ health: this.health.value, maxHealth: HEALTH.max })
-    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR,B') as Record<string, Phaser.Input.Keyboard.Key>
     this.input.mouse?.disableContextMenu()
     // A tap on the world shorter than a frame still casts: latch where it landed until the next update.
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
@@ -144,6 +144,23 @@ export class MainScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
+    // The spell builder: B or the gamepad's Select opens it; while it's open the game pauses.
+    for (const e of spellEdits.splice(0)) { this.hotbar[e.slot] = e.spell; this.caster.reset(); this.syncHotbar() }
+    const pad0 = this.input.gamepad?.pad1
+    const select = !!pad0 && pad0.buttons[8]?.pressed
+    const open = hud.get().builderOpen
+    if ((this.keys.B.isDown && !this.builderKey) || (select && !this.selectHeld)) hud.set({ builderOpen: !open })
+    this.builderKey = this.keys.B.isDown
+    this.selectHeld = select
+    const nowOpen = hud.get().builderOpen
+    if (nowOpen !== this.wasOpen) {
+      // Hand the keyboard to the builder while it's open, and forget keys held across the switch.
+      this.input.keyboard!.enabled = !nowOpen
+      this.input.keyboard!.resetKeys()
+      this.builderKey = false
+      this.wasOpen = nowOpen
+    }
+    if (nowOpen) return
     const realDt = Math.min(0.05, deltaMs / 1000)
     this.modeTime += realDt
     // A beat of slow motion as the body shatters.
@@ -304,6 +321,9 @@ export class MainScene extends Phaser.Scene {
   private padBumpers = { lb: false, rb: false }
   private lastPointer = { x: -1, y: -1 }
   private tapLatch: { x: number; y: number } | null = null
+  private builderKey = false
+  private wasOpen = false
+  private selectHeld = false
 
   private aimAt(x: number, y: number, centreY: number): void {
     const dx = x - this.player.x, dy = y - centreY, m = Math.hypot(dx, dy) || 1
@@ -323,7 +343,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private syncHotbar(): void {
-    hud.set({ slots: this.hotbar.map(describe), activeSlot: this.slot, maxMana: this.mana.max })
+    hud.set({ slots: this.hotbar.map(describe), spells: this.hotbar.map((s) => ({ ...s, elements: [...s.elements] })), activeSlot: this.slot, maxMana: this.mana.max })
   }
 
   /** How much of the player's body is in liquid, 0–1. */

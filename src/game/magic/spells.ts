@@ -80,6 +80,43 @@ export function channelCost(spell: Spell): number {
   return els * (shapeInfo(spell.shape).perSecond ?? 2)
 }
 
+/** Toggles an element in or out; at capacity, a new one replaces the oldest. A spell keeps at least one. */
+export function toggleElement(spell: Spell, el: ElementId, capacity = STAND_IN_CAPACITY): Spell {
+  if (spell.elements.includes(el)) {
+    return spell.elements.length > 1 ? { ...spell, elements: spell.elements.filter((e) => e !== el) } : spell
+  }
+  const elements = [...spell.elements, el]
+  return { ...spell, elements: elements.length > capacity ? elements.slice(elements.length - capacity) : elements }
+}
+
+/** Changes the shape, keeping the casting type if the new shape allows it, otherwise its first type. */
+export function withShape(spell: Spell, shape: ShapeId): Spell {
+  const types = shapeInfo(shape).types
+  if (!types.length) return spell
+  return { ...spell, shape, cast: types.includes(spell.cast) ? spell.cast : types[0] }
+}
+
+export const SHAPE_HELP: Record<ShapeId, string> = {
+  projectile: 'A bolt that arcs from the catalyst and bursts its elements where it hits.',
+  beam: 'A held line to the first thing it meets; forces act where it lands, Force drills, substances pour out.',
+  aoe: 'A disc of its elements at the aimed point.',
+  rune: 'Placed on the first surface you aim at; goes off when something comes near (you, once you\'ve left it).',
+  self: 'On you: Force launches you (held, you fly), Life heals, held Cold freezes water underfoot, the rest ring around you.',
+  target: 'Straight onto the aimed point or the first thing in the way: small and precise.',
+  summon: 'A stand-in wisp at the aimed point that drifts after targets giving off its elements; a Life wisp follows and heals you.',
+  orbit: 'Motes circle you and burst on the first thing they touch.',
+  wave: 'A ring spreading out from you, acting on everything its edge crosses.',
+  cone: 'A spray from the catalyst; substances land where the spray stops.',
+  enchant: 'Enchants a weapon. There are no weapons yet.',
+}
+export const CAST_HELP: Record<CastType, string> = {
+  instant: 'Casts once, the moment you press.',
+  charged: 'Hold to build it up (up to 1.2 s), release to cast: bigger the longer you held.',
+  channeled: 'Keeps going while you hold, costing mana a second.',
+  burst: 'Three quick shots from one press.',
+  continuous: 'Keeps firing shots while you hold.',
+}
+
 export function isValid(spell: Spell): boolean {
   return spell.elements.length > 0 && spell.elements.length <= STAND_IN_CAPACITY && shapeInfo(spell.shape).types.includes(spell.cast)
 }

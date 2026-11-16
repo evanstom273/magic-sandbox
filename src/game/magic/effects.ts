@@ -172,6 +172,7 @@ export class Magic {
 
   /** Elements over a disc, on the world and on any bodies inside it. Force pushes away from the centre. */
   hit(els: readonly ElementId[], cx: number, cy: number, r: number, forceStrength: number, sustained: boolean, dt = 0): void {
+    if (!els.length) return
     applyDisc(this.grid, els.filter((e) => e !== 'force'), cx, cy, r, 1, sustained)
     if (els.includes('force')) push(this.grid, cx, cy, r, Math.min(1, forceStrength))
     for (const b of this.bodies) {

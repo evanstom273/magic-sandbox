@@ -16,14 +16,14 @@ Authoritative, living record of the game's design. It's updated after everything
 
 ## A. Project Overview
 
-*Not decided yet: what the game is, who the player is, and what it's called.* The repository is `magic-sandbox`.
+A **voxel-based magic physics game** (History #7, #8): **a mix between Terraria and Noita** (History #9), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:07:36+00:00):**
+**Where the project stands (as of 2026-11-16T20:10:35+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
-- Next: Lyra explains the top-level design decisions, then rounds of questions expand them.
+- Lyra has started explaining the top-level design (History #7–#10); rounds of questions expand it once she's done.
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -138,10 +138,13 @@ Don't rush through the questions simply to get to implementation. The design pro
 *Categories are added as the design grows.*
 
 ### Concept
-- *Nothing decided yet.*
+- **Voxel-based.** Lyra's word; whether that means a flat grid of cells or 3D voxels is open (§E). *(2026-11-16T20:10:35+00:00, documentation time — History #7)*
+- **A magic physics game.** *(2026-11-16T20:10:35+00:00, documentation time — History #8)*
+- **A mix between Terraria and Noita.** Which parts of each is still to be explored. *(2026-11-16T20:10:35+00:00, documentation time — History #9)*
 
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
+- **The characters are in Lyra's Stylised Geometry style.** The world is voxels; how much of the guide applies to it is open (§E). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
 
 ### Technical architecture / platform
 - **Stack: the same as the stealth game's.** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js; React as the outer shell with Phaser running inside one React component, Phaser 4, and Dexie added when there's first something to save. *(2026-11-16T20:00:02+00:00, documentation time — History #3)*
@@ -160,7 +163,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-Nothing in design yet. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F). Next, Lyra explains the top-level design decisions, then rounds of questions expand them.
+**In design: the top level.** Lyra is explaining it: a voxel-based magic physics game, a mix between Terraria and Noita, with Stylised Geometry characters (#7–#10). Rounds of questions expand it once she's done. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
 
 **Artifacts:** none yet.
 
@@ -177,9 +180,12 @@ Nothing in design yet. Stack and deployment are settled (#3, #4) and the scaffol
 ## E. Open Questions
 
 1. **Title.**
-2. **The concept:** what the game is, and who the player is.
+2. **The concept:** ~~what the game is~~ (#7–#10); who the player is.
 3. ~~**Stack.**~~ The stealth game's, on GitHub Pages for now (#3, #4).
 4. **Platforms and input.**
+5. **What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).
+6. **Which parts of Terraria and which of Noita** (#9). They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.
+7. **How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.
 
 ---
 
@@ -230,6 +236,10 @@ Nothing in design yet. Stack and deployment are settled (#3, #4) and the scaffol
 | 4 | 2026-11-16T20:00:02+00:00 *(documentation time)* | Deployment | Deployed on GitHub Pages for now, instead of Cloudflare Workers. Pages activated by Lyra. |
 | 5 | 2026-11-16T20:07:36+00:00 *(documentation time)* | Workflow | Scaffold approved as proposed: the stealth game's, without Cloudflare. |
 | 6 | 2026-11-16T20:07:36+00:00 *(documentation time)* | Testing | Vitest for logic, plus a Playwright smoke test that boots the game in a real browser (Claude's recommendation, approved). |
+| 7 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Concept | Voxel-based (2D grid or 3D voxels not yet decided). |
+| 8 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Concept | A magic physics game. |
+| 9 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Concept | A mix between Terraria and Noita. |
+| 10 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Art | Characters in Lyra's Stylised Geometry art style; the world is voxels. |
 
 ---
 

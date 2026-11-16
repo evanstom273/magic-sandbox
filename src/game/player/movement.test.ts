@@ -123,16 +123,18 @@ describe('walls (auto grab)', () => {
     return s
   }
 
-  test('pushing into a wall while falling clings after a moment, with no time limit and nothing held', () => {
+  test('pushing into a wall while falling clings after a moment, and stays as long as you keep pushing', () => {
     const s = nextToWall()
     run(s, input({ move: 1 }), PLAYER.clingDelay * 0.5, withWall)
     expect(s.climbing).toBe(0) // brushing past doesn't grab
     const ev = run(s, input({ move: 1 }), PLAYER.clingDelay, withWall)
     expect(ev.some((e) => e.grabbed)).toBe(true)
     const y = s.y
-    run(s, idle, 5, withWall)
+    run(s, input({ move: 1 }), 5, withWall)
     expect(s.climbing).toBe(1)
     expect(s.y).toBeCloseTo(y, 5)
+    run(s, idle, DT, withWall)
+    expect(s.climbing).toBe(0) // let go of the stick and you drop off
   })
 
   test('bumps at the feet are never walls: no cling, no climb, no wall jump, just stepped over', () => {
@@ -157,19 +159,21 @@ describe('walls (auto grab)', () => {
     expect(s.vy).toBeLessThan(0)
   })
 
-  test('pressing up against a wall on the ground starts a climb', () => {
+  test('pushing up into a wall on the ground starts a climb, but up alone does not', () => {
     const s = standing(80 - PLAYER.size / 2, withWall)
-    run(s, input({ climb: -1 }), 0.3, withWall)
+    run(s, input({ climb: -1 }), 0.2, withWall)
+    expect(s.climbing).toBe(0)
+    run(s, input({ climb: -1, move: 1 }), 0.3, withWall)
     expect(s.climbing).toBe(1)
     expect(s.y).toBeLessThan(100 - 5)
   })
 
-  test('climbs up and down; climbing down is the slide; pushing away lets go', () => {
+  test('climbs up and down while pushing in; climbing down is the slide; pushing away lets go', () => {
     const s = clinging()
     const y0 = s.y
-    run(s, input({ climb: -1 }), 0.5, withWall)
+    run(s, input({ move: 1, climb: -1 }), 0.5, withWall)
     expect(s.y).toBeCloseTo(y0 - PLAYER.climbUpSpeed * 0.5, 0)
-    const ev = run(s, input({ climb: 1 }), 0.25, withWall)
+    const ev = run(s, input({ move: 1, climb: 1 }), 0.25, withWall)
     expect(ev.at(-1)!.wallSliding).toBe(1)
     expect(s.y).toBeGreaterThan(y0 - PLAYER.climbUpSpeed * 0.5)
     run(s, input({ move: -1 }), DT, withWall)
@@ -178,7 +182,7 @@ describe('walls (auto grab)', () => {
 
   test('climbing down to the floor lets go', () => {
     const s = clinging()
-    run(s, input({ climb: 1 }), 1.5, withWall)
+    run(s, input({ move: 1, climb: 1 }), 1.5, withWall)
     expect(s.grounded).toBe(true)
     expect(s.climbing).toBe(0)
   })
@@ -194,6 +198,12 @@ describe('walls (auto grab)', () => {
     expect(s.x).toBeLessThan(x)
   })
 
+  test('jumping off a wall with no direction held is a wall jump', () => {
+    const s = clinging()
+    expect(stepPlayer(s, input({ jump: true }), DT, withWall).wallJumped).toBe(1)
+    expect(s.vx).toBeLessThan(0)
+  })
+
   test('a wall jump also works from a cell or two away', () => {
     const s = nextToWall()
     s.x -= 1.5
@@ -201,10 +211,10 @@ describe('walls (auto grab)', () => {
     expect(stepPlayer(s, input({ jump: true }), DT, withWall).wallJumped).toBe(1)
   })
 
-  test('jumping while clinging with no direction hops straight up the wall', () => {
+  test('jumping while pushing into the wall hops straight up it', () => {
     const s = clinging()
     const x = s.x
-    const ev = stepPlayer(s, input({ jump: true }), DT, withWall)
+    const ev = stepPlayer(s, input({ move: 1, jump: true }), DT, withWall)
     expect(ev.climbJumped).toBe(true)
     expect(s.vy).toBeLessThan(-PLAYER.climbJumpSpeed * 0.9)
     expect(s.x).toBeCloseTo(x, 5)

@@ -100,17 +100,18 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   if (s.wallLock > 0) move = s.lockDir
   const climb = Math.max(-1, Math.min(1, input.climb))
 
-  // Auto grab: push into a wall for a moment while falling (or press up against one on the ground)
-  // to cling. Once on, the player stays without holding anything; pushing away lets go. No stamina.
+  // Auto grab: push into a wall for a moment while falling (or push up into one on the ground) to
+  // cling. The player only stays on while pushing towards the wall; letting go or pushing away drops
+  // off. No stamina.
   const touching = wallNear(solid, s, 1)
   const pushing = move === 0 ? 0 : move > 0 ? 1 : -1
   const pushingWhileFalling = !s.grounded && s.vy > 0 && touching !== 0 && pushing === touching
   s.clingPush = pushingWhileFalling ? s.clingPush + dt : 0
   if (s.climbing !== 0) {
-    if (touching !== s.climbing || pushing === -s.climbing) s.climbing = 0
+    if (touching !== s.climbing || pushing !== s.climbing) s.climbing = 0
   } else if (touching !== 0 && s.wallLock <= 0) {
     const fromAir = s.clingPush >= T.clingDelay
-    const fromGround = s.grounded && climb < 0
+    const fromGround = s.grounded && climb < 0 && pushing === touching
     if (fromAir || fromGround) {
       s.climbing = touching
       s.airJumps = T.airJumps
@@ -132,12 +133,10 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
       s.climbing = 0
       ev.ledgeHopped = true
     } else if (s.buffer > 0) {
+      // Still pushing into the wall, so a jump hops straight up it. (Letting go first makes it a wall jump.)
       s.buffer = 0
-      if (move === -side) wallJump(s, side, ev)
-      else {
-        s.vy = -T.climbJumpSpeed
-        ev.climbJumped = true
-      }
+      s.vy = -T.climbJumpSpeed
+      ev.climbJumped = true
       s.climbing = 0
     }
   } else {

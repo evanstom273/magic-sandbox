@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  /* Placeholder backdrop from the reference sheets, until the game has a palette. */
+  background: #14141c;
+}

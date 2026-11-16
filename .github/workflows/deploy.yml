@@ -18,26 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Until the project is scaffolded there's nothing to build, so the run
-  # skips the build and deploy instead of failing.
-  check:
-    runs-on: ubuntu-latest
-    outputs:
-      has_app: ${{ steps.app.outputs.has_app }}
-    steps:
-      - uses: actions/checkout@v5
-      - id: app
-        run: |
-          if [ -f package.json ]; then
-            echo "has_app=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_app=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No package.json yet, so there's nothing to deploy."
-          fi
-
   build:
-    needs: check
-    if: needs.check.outputs.has_app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

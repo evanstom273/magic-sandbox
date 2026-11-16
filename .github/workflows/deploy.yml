@@ -1,0 +1,68 @@
+# Builds the game and deploys it to GitHub Pages on every push to main.
+# Pages must be set to deploy from "GitHub Actions" (Settings > Pages > Source).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push waits rather than cancelling one in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Until the project is scaffolded there's nothing to build, so the run
+  # skips the build and deploy instead of failing.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      has_app: ${{ steps.app.outputs.has_app }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: app
+        run: |
+          if [ -f package.json ]; then
+            echo "has_app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_app=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No package.json yet, so there's nothing to deploy."
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.has_app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: pages
+        uses: actions/configure-pages@v5
+      # The site lives at /magic-sandbox/, not the domain root; Vite's config
+      # reads BASE_PATH so asset paths point there.
+      - run: npm run build
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

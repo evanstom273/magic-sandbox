@@ -18,12 +18,17 @@ Authoritative, living record of the game's design. It's updated after everything
 
 *Not decided yet: what the game is, who the player is, and what it's called.* The repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T19:56:10+00:00):**
+**Where the project stands (as of 2026-11-16T20:00:02+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
+- Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4). The deploy workflow is in, with nothing to deploy until the project is scaffolded.
 - Nothing designed or built yet.
 
-**Stack:** not decided (§E).
+**Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
+- **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
+- **Tailwind** styles anything React draws.
+- **Dexie** comes in when there's first something to save.
+- **GitHub Pages** serves the built game, deployed by a GitHub Actions workflow on every push to `main`. It's static hosting, so there's no server code.
 
 **Art style:** Stylised Geometry, kept in `stylised-geometry/`: the guide (`STYLISED_GEOMETRY.md`), seven SVG reference sheets and `make_sheets.py`, which regenerates them. In short: characters built from simple geometric shapes, with faces and floating hands, in a dark world lit around them, all drawn from shapes in code or SVG rather than sprites. The guide is the reference for how things look; this document records the game's own design.
 
@@ -137,6 +142,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
 
+### Technical architecture / platform
+- **Stack: the same as the stealth game's.** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js; React as the outer shell with Phaser running inside one React component, Phaser 4, and Dexie added when there's first something to save. *(2026-11-16T20:00:02+00:00, documentation time — History #3)*
+- **Deployed on GitHub Pages, for now**, instead of the stealth game's Cloudflare Workers. Lyra has activated Pages in the repository settings. *(2026-11-16T20:00:02+00:00, documentation time — History #4)*
+
 ### Documentation
 - **Living `GAME_DESIGN.md`**, reset to the base of `STEALTH_GAME_DESIGN.md`: the same structure and conventions, updated after everything, with none of the stealth game's design. *(2026-11-16T19:56:10+00:00, documentation time — History #1)*
 
@@ -144,7 +153,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-Nothing in design or development yet.
+Nothing in design yet. Stack and deployment are settled (#3, #4), and the GitHub Pages workflow is in, waiting for a project scaffold to build.
 
 **Artifacts:** none yet.
 
@@ -162,19 +171,20 @@ Nothing in design or development yet.
 
 1. **Title.**
 2. **The concept:** what the game is, and who the player is.
-3. **Stack.** Lyra's normal stack is React, Vite, TypeScript, Tailwind CSS, Phaser, IndexedDB via Dexie.js and Cloudflare Workers; not yet confirmed for this game.
+3. ~~**Stack.**~~ The stealth game's, on GitHub Pages for now (#3, #4).
 4. **Platforms and input.**
 
 ---
 
 ## F. Implementation Status
 
-*Updated 2026-11-16T19:56:10+00:00.*
+*Updated 2026-11-16T20:00:02+00:00.*
 
 | Feature | Status | Notes |
 |---|---|---|
 | Design doc | Done | `GAME_DESIGN.md`, reset to the base of `STEALTH_GAME_DESIGN.md`. *(2026-11-16T19:56:10+00:00)* |
 | Art style reference | Added | `stylised-geometry/`, unpacked from `stylised-geometry.zip` as supplied, with Lyra's `make_sheets.py` in `sheets/`. Checked: the script regenerates all seven sheets byte for byte. *(2026-11-16T19:56:10+00:00)* |
+| Deployment workflow | Added, idle until there's an app | `.github/workflows/deploy.yml`: on every push to `main` (or run by hand from the Actions tab), builds with Node 24 and deploys `dist/` to GitHub Pages. While there's no `package.json` it skips the build and deploy instead of failing. Hasn't deployed anything yet. *(2026-11-16T20:00:02+00:00)* |
 
 ### Known issues and limitations
 - None yet.
@@ -183,6 +193,10 @@ Nothing in design or development yet.
 - **The art style zip was committed unpacked**, as the `stylised-geometry/` folder rather than the `.zip` itself, since the guide is written to be copied into a project as a folder. `make_sheets.py` went into `sheets/`, where the guide says it lives. Same as in the stealth game.
 - **The document is named `GAME_DESIGN.md`**, the name the stealth game's design doc started with, until this game has a name of its own.
 - **Carried over from `STEALTH_GAME_DESIGN.md` rather than decided for this project:** the style guide being a reference, not gospel; the guiding principles and Lyra's three workflow sections in §A (with the document's name in her words changed to `GAME_DESIGN.md`); and the "explain before adding" and merge-to-`main` standing orders in §H. Everything else, from the stealth game's concept to its stack, was left behind.
+- **"Basically the same" stack** is read as including how the stealth game's parts fit together (its History #7–#9): React as the shell with Phaser in one component, Phaser 4, and Dexie only once something needs saving. Its testing setup (Vitest, plus a Playwright smoke test) isn't recorded as decided here.
+- **The workflow skips cleanly while there's no `package.json`**, so pushes to `main` don't pile up failed runs before the scaffold exists. The check can come out once the scaffold is in.
+- **Vite's base path comes from the workflow.** The site is served from `/magic-sandbox/`, not the domain root, so the build gets `BASE_PATH` from Pages' own settings, and the scaffold's `vite.config` should read it (falling back to `/` locally). A custom domain later wouldn't need a code change.
+- **Pages must deploy from GitHub Actions** (Settings → Pages → Source). Claude can't see the repository settings, so this is unconfirmed.
 
 ---
 
@@ -194,6 +208,8 @@ Nothing in design or development yet.
 |---|---|---|---|
 | 1 | 2026-11-16T19:56:10+00:00 *(documentation time)* | Documentation | Living `GAME_DESIGN.md`, reset to the base of `STEALTH_GAME_DESIGN.md`: the same structure and conventions, none of the stealth game's design. |
 | 2 | 2026-11-16T19:56:10+00:00 *(documentation time)* | Art | Art style: Stylised Geometry (`stylised-geometry/`). |
+| 3 | 2026-11-16T20:00:02+00:00 *(documentation time)* | Technical | Stack: the same as the stealth game's (React, Vite, TypeScript, Tailwind CSS, Phaser 4, IndexedDB via Dexie.js; React shell, Phaser in one component, Dexie when first needed). |
+| 4 | 2026-11-16T20:00:02+00:00 *(documentation time)* | Deployment | Deployed on GitHub Pages for now, instead of Cloudflare Workers. Pages activated by Lyra. |
 
 ---
 
@@ -201,6 +217,8 @@ Nothing in design or development yet.
 
 - **Repository:** `evanstom273/magic-sandbox`. Working branch `ccr-0ed275cd-237irz`.
 - **Art style reference:** `stylised-geometry/STYLISED_GEOMETRY.md` and `stylised-geometry/sheets/01-anatomy.svg` to `07-colour.svg`, regenerated by `stylised-geometry/sheets/make_sheets.py` (Python standard library only; takes the output folder as its one argument). The guide was developed in a side-on platformer; rules it marks **(untested)** haven't been through a real game yet.
-- **Project layout:** nothing yet beyond this document, the art style reference and the README.
+- **Live site:** https://evanstom273.github.io/magic-sandbox/, once something's been deployed.
+- **Deployment:** `.github/workflows/deploy.yml` builds (`npm ci`, `npm run build` with `BASE_PATH` set) and deploys `dist/` to GitHub Pages on every push to `main`. Pages' source has to be set to GitHub Actions.
+- **Project layout:** nothing yet beyond this document, the deploy workflow, the art style reference and the README.
 - **Explain before adding** *(carried over from Lyra's previous design documents)*: before building anything, Claude says what it's about to add and how, then waits for the go-ahead.
 - **Workflow** *(Lyra's standing order across all her projects)*: after committing to the working branch, always merge straight to `main` as well; no need to ask each time.

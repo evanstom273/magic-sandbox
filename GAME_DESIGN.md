@@ -18,13 +18,13 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:19:20+00:00):**
+**Where the project stands (as of 2026-11-16T20:21:38+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
 - Top-level design from Lyra (History #7–#13).
-- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16).
+- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20).
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -147,8 +147,12 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ### Magic
 - **Magic does everything:** fighting, shaping the world (digging, building, moving and transforming materials), getting around, and solving problems the world throws up. All four picked. *(2026-11-16T20:19:20+00:00 — History #14)*
-- **Spells are mixed from elements and built from parts, simpler than Noita.** Lyra's own combination of two options: elements mixed at cast time (a bit like Magicka; Claude's recommendation) and spells assembled from parts (like Noita's wands). How the two fit together is round 2. Fixed spells, and fixed spells with modifiers, were not chosen. *(2026-11-16T20:19:20+00:00 — History #15)*
+- **Spells are mixed from elements and built from parts, simpler than Noita.** Lyra's own combination of two options: elements mixed at cast time (a bit like Magicka; Claude's recommendation) and spells assembled from parts (like Noita's wands). ~~How the two fit together is round 2.~~ They fit as element + shape + trigger (#17). Fixed spells, and fixed spells with modifiers, were not chosen. *(2026-11-16T20:19:20+00:00 — History #15)*
 - **Mostly emergent, with some set pieces.** Spells are simple ingredients and most of the interesting results come from the simulated world, plus a few hand-made moments where it matters, such as a boss's weakness. Claude's recommendation, approved; fully emergent, designed spell combos and mostly scripted were not chosen. *(2026-11-16T20:19:20+00:00 — History #16)*
+- **A spell is element + shape + trigger.** The elements are what it's made of; the shape is how it's delivered (such as a bolt, a spray, a beam, a wall, a burst or a trap); an optional trigger sets off a second spell (such as on impact or after a delay), the part of Noita that makes chains. Chosen over element + shape alone (Claude's recommendation) and a short row of slots. *(2026-11-16T20:21:38+00:00 — History #17)*
+- **Spells are both prepared and mixed on the fly:** a few built in a spell menu and kept ready on a hotbar, plus quick mixing in the moment. Chosen over prepared only (Claude's recommendation) and mixed on the fly only. *(2026-11-16T20:21:38+00:00 — History #18)*
+- **When a spell has more than one element, the world decides.** The elements come out together and react by the world's own rules (fire and water make steam because that's what they do), with no separate mixing table. Claude's recommendation, approved; designed mixes, elements side by side, and one element per spell were not chosen. *(2026-11-16T20:21:38+00:00 — History #19)*
+- **Spells make real material.** Where the element is a substance, the spell leaves actual stuff in the world (water that flows and pools, rock that stays, fire that spreads); things like lightning stay effects. Claude's recommendation, approved; fading material and effects only were not chosen. *(2026-11-16T20:21:38+00:00 — History #20)*
 
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
@@ -172,7 +176,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic round 1 is done (#14–#16); round 2 is how elements and parts fit together. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
+**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic rounds 1 and 2 are done (#14–#20); round 3 is what the elements are, what limits casting, what the player casts with, and where new magic comes from. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
 
 **Artifacts:** none yet.
 
@@ -195,7 +199,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
 6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
 7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
-8. **Magic details** (#14–#16): how elements and parts fit together; when spells are put together; what the elements are; what limits casting; what the player casts with; where spells come from.
+8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); what the elements are; what limits casting; what the player casts with; where spells come from; the list of shapes and triggers; how quick mixing works on touch.
 9. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 
 ---
@@ -257,6 +261,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 14 | 2026-11-16T20:19:20+00:00 | Magic | Magic is for fighting, shaping the world, getting around and solving problems (all four). |
 | 15 | 2026-11-16T20:19:20+00:00 | Magic | Spells are mixed from elements and built from parts, simpler than Noita (Lyra combined two options). |
 | 16 | 2026-11-16T20:19:20+00:00 | Magic | Mostly emergent, with some hand-made set pieces (Claude's recommendation, approved). |
+| 17 | 2026-11-16T20:21:38+00:00 | Magic | A spell is element + shape + trigger (the trigger optional, setting off a second spell). |
+| 18 | 2026-11-16T20:21:38+00:00 | Magic | Spells are both prepared (a hotbar of ready spells) and mixed on the fly. |
+| 19 | 2026-11-16T20:21:38+00:00 | Magic | Multiple elements in a spell react by the world's own rules; no mixing table (Claude's recommendation, approved). |
+| 20 | 2026-11-16T20:21:38+00:00 | Magic | Spells make real material where the element is a substance (Claude's recommendation, approved). |
 
 ---
 

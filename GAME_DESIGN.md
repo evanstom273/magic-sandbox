@@ -18,13 +18,13 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:30:15+00:00):**
+**Where the project stands (as of 2026-11-16T20:31:38+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
 - Top-level design from Lyra (History #7–#13).
-- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24); round 4 drawing elements in, shapes and triggers from the start, what catalysts do, and holding one at a time (History #25–#28). Shapes and casting types come from Lyra's Magic Mod (History #29, #30).
+- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24); round 4 drawing elements in, shapes and triggers from the start, what catalysts do, and holding one at a time (History #25–#28). Shapes and casting types come from Lyra's Magic Mod (History #29, #30); round 5 settled how casting types fit, the starting triggers, and that weapons exist (History #31–#33).
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -162,7 +162,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Catalysts change power, affinity, capacity and quirks** (all four picked): how strong, big or far-reaching spells are; which elements, shapes or triggers they favour; how many elements a spell can mix or how many prepared spells fit on the hotbar; and odd properties of their own. **Any spell can be cast from any catalyst; some are just better at it.** Lyra's note. *(2026-11-16T20:27:29+00:00 — History #27)*
 - **One catalyst at a time,** swapping between those carried. Chosen over one in each hand. *(2026-11-16T20:27:29+00:00 — History #28)*
 - **The shapes are the spell types from Lyra's Magic Mod design** (a Minecraft mod of hers): **Projectile, Beam, AoE, Rune, Self, Target, Summon, Orbit, Wave, Cone** and **Weapon enchantment**. Lyra's call, replacing the examples Claude gave. *(2026-11-16T20:30:15+00:00 — History #29)*
-- **The casting types come from the Magic Mod too:** **Instant** (one activation casts once), **Charged** (holding strengthens a spell before release), **Channeled** (holding sustains an effect), **Burst** (one activation releases several shots) and **Continuous** (holding repeatedly casts individual shots). How they fit into element + shape + trigger is open. *(2026-11-16T20:30:15+00:00 — History #30)*
+- **The casting types come from the Magic Mod too:** **Instant** (one activation casts once), **Charged** (holding strengthens a spell before release), **Channeled** (holding sustains an effect), **Burst** (one activation releases several shots) and **Continuous** (holding repeatedly casts individual shots). ~~How they fit into element + shape + trigger is open.~~ Each shape allows a few (#31). *(2026-11-16T20:30:15+00:00 — History #30)*
+- **Each shape allows the casting types that make sense for it**, and the player picks among those when building (a Beam can be Channeled; a Projectile Instant, Charged or Burst, for example). Claude's recommendation, approved; a free choice of casting type and one set by the shape were not chosen. Which shape allows which is still to be worked out. *(2026-11-16T20:31:38+00:00 — History #31)*
+- **Four triggers to start with** (all four picked): **on impact**, **after a delay**, **when something comes near** (a creature or the player), and **on recast** (cast again to set it off). *(2026-11-16T20:31:38+00:00 — History #32)*
+- **Weapons exist too,** alongside magic, and **Weapon enchantment enchants them.** Chosen over enchanting the catalyst (Claude's recommendation) and dropping the shape. What the weapons are is open. *(2026-11-16T20:31:38+00:00 — History #33)*
 
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
@@ -186,7 +189,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic rounds 1–4 are done (#14–#28): the core of the magic is settled, and the shapes and casting types come from Lyra's Magic Mod (#29, #30). What's left: how casting types fit in, the triggers, what Weapon enchantment means here, quick mixing on touch and mana's numbers, plus cell size. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
+**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic rounds 1–4 are done (#14–#28): the core of the magic is settled, and the shapes and casting types come from Lyra's Magic Mod (#29, #30). Round 5 settled how casting types fit, the triggers and that weapons exist (#31–#33). What's left in magic is mostly feel: quick mixing on touch, mana's numbers, which shapes allow which casting types. Also open: the weapons, and cell size. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
 
 **Artifacts:** none yet.
 
@@ -209,8 +212,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
 6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
 7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
-8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); the triggers; how casting types fit into a spell (#30); what Weapon enchantment enchants, since fighting is done with spells (#14); how quick mixing works on touch.
+8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
 9. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
+10. **Weapons** (#33): what they are, how they sit beside magic (which was picked as the main way to fight in #14's options), and how they're got.
 
 ---
 
@@ -288,6 +292,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 28 | 2026-11-16T20:27:29+00:00 | Magic | One catalyst at a time. |
 | 29 | 2026-11-16T20:30:15+00:00 | Magic | Shapes are the Magic Mod's spell types: Projectile, Beam, AoE, Rune, Self, Target, Summon, Orbit, Wave, Cone, Weapon enchantment (Lyra's call). |
 | 30 | 2026-11-16T20:30:15+00:00 | Magic | Casting types from the Magic Mod: Instant, Charged, Channeled, Burst, Continuous. How they fit in is open. |
+| 31 | 2026-11-16T20:31:38+00:00 | Magic | Each shape allows the casting types that make sense for it; the player picks among them (Claude's recommendation, approved). |
+| 32 | 2026-11-16T20:31:38+00:00 | Magic | Starting triggers: on impact, after a delay, when something comes near, on recast. |
+| 33 | 2026-11-16T20:31:38+00:00 | Combat | Weapons exist alongside magic; Weapon enchantment enchants them. |
 
 ---
 

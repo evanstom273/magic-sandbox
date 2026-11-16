@@ -19,7 +19,7 @@ export function buildTestRoom(): CellGrid {
         (x >= 150 && x < 205 && y >= 92 && y < 98) || // high ledge
         (x >= 238 && x < 250 && y >= 104) || // wall
         (x >= 275 && x < 300 && y >= 156) || // low step
-        (x >= 262 && x < 300 && y >= 34 && y < 38) // high ledge: scale the right-hand wall to reach it
+        (x >= 250 && x < 290 && y >= 34 && y < 38) // high ledge: scale the right-hand wall, then kick off onto it
       if (solid) g.set(x, y, Material.ROCK)
     }
   }

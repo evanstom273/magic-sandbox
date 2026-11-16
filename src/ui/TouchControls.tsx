@@ -92,7 +92,11 @@ function Thumbstick() {
 
 // On-screen controls for phones and tablets: the thumbstick bottom left, Jump bottom right.
 export function TouchControls() {
-  const [show] = useState(wantsTouch)
+  const [show] = useState(() => {
+    const t = wantsTouch()
+    document.documentElement.dataset.touch = t ? '1' : '0'
+    return t
+  })
   if (!show) return null
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-[max(16px,env(safe-area-inset-left))] pb-[max(16px,env(safe-area-inset-bottom))]">

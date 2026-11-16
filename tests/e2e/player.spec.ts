@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 // Drives the player through the dev build's window.__player hook (left out of production builds).
 test.skip(({ baseURL }) => !baseURL?.includes('5173'), 'needs the development build')
 
-type P = { x: number; y: number; vy: number; grounded: boolean; airJumps: number; sx: number; sy: number; dust: number; rings: number; health: number; marks: number }
+type P = { x: number; y: number; vy: number; grounded: boolean; airJumps: number; sx: number; sy: number; dust: number; rings: number; health: number; marks: number; mode: string; shards: number }
 const player = (page: Page) => page.evaluate(() => (window as unknown as { __player: () => P }).__player())
 
 async function ready(page: Page, url = './') {
@@ -69,4 +69,25 @@ test('a long fall hurts, dents the body and shows on the bar; the rest spot heal
   await page.evaluate(() => (window as unknown as { __teleport: (x: number, y: number) => void }).__teleport(137, 150))
   await expect.poll(async () => (await player(page)).health, { timeout: 5000 }).toBe(100)
   expect((await player(page)).marks).toBe(0)
+})
+
+test('at zero health the body shatters, the game waits for Jump, then the player gathers back at the start', async ({ page }) => {
+  await ready(page)
+  await page.keyboard.down('KeyD')
+  await page.waitForTimeout(400)
+  await page.keyboard.up('KeyD')
+  await page.evaluate(() => (window as unknown as { __hurt: (n: number) => void }).__hurt(100))
+  await expect.poll(async () => (await player(page)).mode).toBe('dying')
+  expect((await player(page)).shards).toBeGreaterThan(100)
+  const prompt = page.getByRole('status')
+  await expect(prompt).toHaveText('Press Jump to continue', { timeout: 3000 })
+  await page.waitForTimeout(500)
+  expect((await player(page)).mode).toBe('dead') // it waits
+
+  await page.keyboard.press('Space')
+  await expect(prompt).toHaveCount(0)
+  await expect.poll(async () => (await player(page)).mode).toBe('alive')
+  const back = await player(page)
+  expect(back.health).toBe(100)
+  expect(back.x).toBeCloseTo(30, 0)
 })

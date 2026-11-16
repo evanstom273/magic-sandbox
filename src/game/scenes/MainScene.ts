@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser'
 import { Dust } from '../effects/dust.ts'
 import { Rings } from '../effects/rings.ts'
+import { Gather, Shatter } from '../effects/shatter.ts'
 import { hud } from '../bridge.ts'
 import { touchInput } from '../input/touchInput.ts'
 import { BodyCell, CellBody } from '../player/body.ts'
@@ -23,6 +24,12 @@ export class MainScene extends Phaser.Scene {
   private health = new Health()
   private marksKey = ''
   private hurtFlash = 0
+  // Alive, shattering (slow motion), dead (waiting for Jump), or gathering back together at the start.
+  private mode: 'alive' | 'dying' | 'dead' | 'returning' = 'alive'
+  private modeTime = 0
+  private jumpWasDown = false
+  private shatter = new Shatter()
+  private gather = new Gather()
   private squash = new Squash()
   private dust = new Dust()
   private rings = new Rings()
@@ -60,8 +67,9 @@ export class MainScene extends Phaser.Scene {
       const w = window as unknown as Record<string, unknown>
       w.__player = () => ({
         ...this.player, sx: this.squash.sx, sy: this.squash.sy, dust: this.dust.motes.length, rings: this.rings.rings.length,
-        health: this.health.value, marks: this.health.marks.length,
+        health: this.health.value, marks: this.health.marks.length, mode: this.mode, shards: this.shatter.shards.length,
       })
+      w.__hurt = (n: number) => this.hurt(n, 0.5)
       w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
   }
@@ -90,9 +98,36 @@ export class MainScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
-    const dt = Math.min(0.05, deltaMs / 1000)
+    const realDt = Math.min(0.05, deltaMs / 1000)
+    this.modeTime += realDt
+    // A beat of slow motion as the body shatters.
+    const dt = this.mode === 'dying' && this.modeTime < 0.5 ? realDt * 0.3 : realDt
+    const input = this.readInput()
+    const jumpPressed = input.jump && !this.jumpWasDown
+    this.jumpWasDown = input.jump
+    this.shatter.update(dt, this.grid.isSolid)
+
+    if (this.mode !== 'alive') {
+      if (this.mode === 'dying' && this.modeTime > 1.1) this.setMode('dead')
+      else if (this.mode === 'dead' && jumpPressed) this.startReturn()
+      else if (this.mode === 'returning') {
+        this.gather.update(realDt)
+        if (this.gather.done) {
+          this.setMode('alive')
+          this.squash.land(0.6)
+          this.dust.puff(this.player.x, this.player.y, 8, 40)
+        }
+      }
+      this.dust.update(dt)
+      this.rings.update(dt)
+      this.squash.update(dt)
+      this.followCamera(dt)
+      this.draw()
+      return
+    }
+
     const p = this.player
-    const ev = stepPlayer(p, this.readInput(), dt, this.grid.isSolid)
+    const ev = stepPlayer(p, input, dt, this.grid.isSolid)
 
     if (ev.jumped) { this.squash.jump(); this.dust.puff(p.x, p.y, 6, 30) }
     if (ev.doubleJumped) { this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1]); this.rings.add(p.x, p.y, 3, 34, 0.28) }
@@ -108,13 +143,8 @@ export class MainScene extends Phaser.Scene {
     }
     if (ev.landed >= 0) { this.squash.land(ev.landed); this.dust.puff(p.x, p.y, 4 + Math.round(ev.landed * 8), 25 + ev.landed * 45) }
     const damage = fallDamage(ev.fell)
-    if (damage > 0) {
-      const dead = this.health.hurt(damage, 'dent', 0.25 + Math.random() * 0.5)
-      this.squash.set(1.35, 0.7) // the guide's getting-hurt squash
-      this.hurtFlash = 0.1
-      this.dust.puff(p.x, p.y, 10, 60)
-      if (dead) this.respawn()
-    }
+    if (damage > 0) this.hurt(damage, 0.25 + Math.random() * 0.5)
+    if (this.mode !== 'alive') return
     // Stand-in rest spot: heals while standing on it.
     if (p.grounded && p.x > REST_SPOT.x0 && p.x < REST_SPOT.x1 && this.health.value < HEALTH.max) {
       this.health.heal(HEALTH.restRate * dt)
@@ -126,13 +156,47 @@ export class MainScene extends Phaser.Scene {
     this.dust.update(dt)
     this.rings.update(dt)
 
-    // Camera follows smoothly.
-    const t = 1 - Math.exp(-8 * dt)
-    this.cam.x += (p.x - this.cam.x) * t
-    this.cam.y += (p.y - PLAYER.size - this.cam.y) * t
-    this.cameras.main.centerOn(this.cam.x, this.cam.y)
-
+    this.followCamera(dt)
     this.draw()
+  }
+
+  private followCamera(dt: number): void {
+    const t = 1 - Math.exp(-(this.mode === 'returning' ? 5 : 8) * dt)
+    this.cam.x += (this.player.x - this.cam.x) * t
+    this.cam.y += (this.player.y - PLAYER.size - this.cam.y) * t
+    this.cameras.main.centerOn(this.cam.x, this.cam.y)
+  }
+
+  private setMode(mode: MainScene['mode']): void {
+    this.mode = mode
+    this.modeTime = 0
+    hud.set({ dead: mode === 'dead' })
+  }
+
+  /** Damage from anywhere (falls, for now). The body squashes, flashes and dents; at zero it shatters. */
+  private hurt(amount: number, at: number): void {
+    const p = this.player
+    const dead = this.health.hurt(amount, 'dent', at)
+    this.squash.set(1.35, 0.7) // the guide's getting-hurt squash
+    this.hurtFlash = 0.1
+    this.dust.puff(p.x, p.y, 10, 60)
+    this.syncHealth()
+    if (dead) {
+      const w = this.body.width, h = this.body.height
+      this.shatter.burst(this.body.cells, w, h, p.x - w / 2, p.y - h)
+      this.setMode('dying')
+    }
+  }
+
+  /** Jump pressed after dying: back to the start, whole, the body gathering together from cells. */
+  private startReturn(): void {
+    this.health.reset()
+    this.syncHealth()
+    Object.assign(this.player, createPlayer(SPAWN.x, SPAWN.y))
+    this.squash.set(1, 1)
+    const w = this.pristine.width, h = this.pristine.height
+    this.gather.start(this.pristine.cells, w, h, SPAWN.x - w / 2, SPAWN.y - h)
+    this.setMode('returning')
   }
 
   /** The top of the floor at column x (for drawing the rest spot). */
@@ -140,14 +204,6 @@ export class MainScene extends Phaser.Scene {
     let y = ROOM_H - 5
     while (y > 0 && this.grid.isSolid(x, y)) y--
     return y + 1
-  }
-
-  /** For now, zero health just puts the player back at the start, whole. */
-  private respawn(): void {
-    this.health.reset()
-    Object.assign(this.player, createPlayer(SPAWN.x, SPAWN.y))
-    this.cam = { x: SPAWN.x, y: SPAWN.y }
-    this.squash.set(1, 1)
   }
 
   /** Keeps the bar and the body's marks in step with health. */
@@ -184,6 +240,21 @@ export class MainScene extends Phaser.Scene {
         g.fillRect(Math.floor(r.x + Math.cos(a) * r.r), Math.floor(r.y + Math.sin(a) * r.r * 0.45), 1, 1)
       }
     }
+
+    // Shattered pieces, where the player died.
+    for (const s of this.shatter.shards) {
+      g.fillStyle(BODY_COLOURS[s.cell], 1)
+      g.fillRect(s.x - 0.5, s.y - 0.5, 1, 1)
+    }
+
+    if (this.mode === 'returning') {
+      for (const c of this.gather.positions()) {
+        g.fillStyle(BODY_COLOURS[c.cell], 1)
+        g.fillRect(c.x, c.y, 1, 1)
+      }
+      return
+    }
+    if (this.mode !== 'alive') return
 
     // The body, redrawn at its squashed size in whole cells, standing on its feet.
     const w = Math.max(4, Math.round(PLAYER.size * this.squash.sx))

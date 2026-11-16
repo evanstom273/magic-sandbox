@@ -1,4 +1,5 @@
 import { PhaserGame } from './game/PhaserGame.tsx'
+import { DeathPrompt } from './ui/DeathPrompt.tsx'
 import { HealthBar } from './ui/HealthBar.tsx'
 import { TouchControls } from './ui/TouchControls.tsx'
 
@@ -8,6 +9,7 @@ export default function App() {
     <main className="relative h-dvh w-full touch-none overflow-hidden select-none">
       <PhaserGame />
       <HealthBar />
+      <DeathPrompt />
       <TouchControls />
     </main>
   )

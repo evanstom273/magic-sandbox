@@ -1,3 +1,5 @@
+import type { Mark } from './health.ts'
+
 // A character's body as its own little grid of cells. It moves smoothly and is drawn at the
 // world's cell size; once the world is simulated, the world acts on these cells directly.
 
@@ -29,6 +31,53 @@ export class CellBody {
       }
     }
     return b
+  }
+
+  /** A copy with the marks of damage on it. Each dent's depth follows the health it stands for. */
+  withMarks(marks: readonly Mark[], fallCap = 85): CellBody {
+    const b = new CellBody(this.width, this.height)
+    b.cells.set(this.cells)
+    const W = this.width, H = this.height
+    for (const m of marks) {
+      if (m.kind !== 'dent') continue
+      const depth = Math.max(1, Math.min(Math.floor(H * 0.42), Math.round((m.amount / fallCap) * H * 0.42)))
+      const half = 1.5 + depth * 0.8
+      const cx = 1 + m.at * (W - 3)
+      for (let x = 0; x < W; x++) {
+        const t = (x + 0.5 - cx) / (half + 0.5)
+        if (Math.abs(t) >= 1) continue
+        const d = Math.round(depth * (1 - t * t))
+        for (let y = H - d; y < H; y++) b.cells[y * W + x] = BodyCell.EMPTY
+      }
+      // A crack or two running up from the dent.
+      let x = Math.round(cx), r = (m.seed * 9301 + 49297) % 233280
+      const len = Math.min(H - 3, depth + 1 + (r % 3))
+      for (let i = 0; i < len; i++) {
+        r = (r * 9301 + 49297) % 233280
+        x = Math.max(2, Math.min(W - 3, x + ((r % 3) - 1)))
+        const y = H - depth - 1 - i
+        if (y <= 1) break
+        if (b.cells[y * W + x] === BodyCell.HERO) b.cells[y * W + x] = BodyCell.INK
+      }
+    }
+    b.reink()
+    return b
+  }
+
+  /** Redraws the outline along whatever edge the body now has. */
+  reink(): void {
+    const W = this.width, H = this.height
+    const out = this.cells.slice()
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (this.cells[y * W + x] !== BodyCell.HERO) continue
+        const edge = x === 0 || y === 0 || x === W - 1 || y === H - 1 ||
+          this.cells[y * W + x - 1] === BodyCell.EMPTY || this.cells[y * W + x + 1] === BodyCell.EMPTY ||
+          this.cells[(y - 1) * W + x] === BodyCell.EMPTY || this.cells[(y + 1) * W + x] === BodyCell.EMPTY
+        if (edge) out[y * W + x] = BodyCell.INK
+      }
+    }
+    this.cells.set(out)
   }
 
   get(x: number, y: number): BodyCell {

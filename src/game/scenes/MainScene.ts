@@ -1,14 +1,16 @@
 import * as Phaser from 'phaser'
 import { Dust } from '../effects/dust.ts'
 import { Rings } from '../effects/rings.ts'
+import { hud } from '../bridge.ts'
 import { touchInput } from '../input/touchInput.ts'
 import { BodyCell, CellBody } from '../player/body.ts'
+import { fallDamage, Health, HEALTH } from '../player/health.ts'
 import { createPlayer, stepPlayer, type PlayerState } from '../player/movement.ts'
 import { Squash } from '../player/squash.ts'
 import { PLAYER, SQUASH } from '../player/tuning.ts'
-import { DUST, HERO, INK } from '../style/tokens.ts'
+import { DAMAGE, DUST, HERO, INK } from '../style/tokens.ts'
 import type { CellGrid } from '../world/grid.ts'
-import { buildTestRoom, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
+import { buildTestRoom, REST_SPOT, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
 import { paintGrid } from '../world/worldTexture.ts'
 
 const BODY_COLOURS: Record<number, number> = { [BodyCell.INK]: INK, [BodyCell.HERO]: HERO }
@@ -17,6 +19,10 @@ export class MainScene extends Phaser.Scene {
   private grid!: CellGrid
   private player!: PlayerState
   private body!: CellBody
+  private pristine!: CellBody
+  private health = new Health()
+  private marksKey = ''
+  private hurtFlash = 0
   private squash = new Squash()
   private dust = new Dust()
   private rings = new Rings()
@@ -41,7 +47,9 @@ export class MainScene extends Phaser.Scene {
 
     this.gfx = this.add.graphics()
     this.player = createPlayer(SPAWN.x, SPAWN.y)
-    this.body = CellBody.square(PLAYER.size)
+    this.pristine = CellBody.square(PLAYER.size)
+    this.body = this.pristine
+    hud.set({ health: this.health.value, maxHealth: HEALTH.max })
     this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K') as Record<string, Phaser.Input.Keyboard.Key>
 
     this.cameras.main.setBounds(0, 0, ROOM_W, ROOM_H)
@@ -50,7 +58,11 @@ export class MainScene extends Phaser.Scene {
 
     if (import.meta.env.DEV) {
       const w = window as unknown as Record<string, unknown>
-      w.__player = () => ({ ...this.player, sx: this.squash.sx, sy: this.squash.sy, dust: this.dust.motes.length, rings: this.rings.rings.length })
+      w.__player = () => ({
+        ...this.player, sx: this.squash.sx, sy: this.squash.sy, dust: this.dust.motes.length, rings: this.rings.rings.length,
+        health: this.health.value, marks: this.health.marks.length,
+      })
+      w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
   }
 
@@ -95,6 +107,20 @@ export class MainScene extends Phaser.Scene {
       this.dust.puff(p.x + ev.wallSliding * (PLAYER.size / 2), p.y - PLAYER.size * 0.6, 1, 8, ev.wallSliding === 1 ? -1 : 1)
     }
     if (ev.landed >= 0) { this.squash.land(ev.landed); this.dust.puff(p.x, p.y, 4 + Math.round(ev.landed * 8), 25 + ev.landed * 45) }
+    const damage = fallDamage(ev.fell)
+    if (damage > 0) {
+      const dead = this.health.hurt(damage, 'dent', 0.25 + Math.random() * 0.5)
+      this.squash.set(1.35, 0.7) // the guide's getting-hurt squash
+      this.hurtFlash = 0.1
+      this.dust.puff(p.x, p.y, 10, 60)
+      if (dead) this.respawn()
+    }
+    // Stand-in rest spot: heals while standing on it.
+    if (p.grounded && p.x > REST_SPOT.x0 && p.x < REST_SPOT.x1 && this.health.value < HEALTH.max) {
+      this.health.heal(HEALTH.restRate * dt)
+    }
+    this.hurtFlash = Math.max(0, this.hurtFlash - dt)
+    this.syncHealth()
     if (ev.skidded) this.dust.puff(p.x - p.facing * 4, p.y, 3, 25, p.facing === 1 ? -1 : 1)
     this.squash.update(dt, p.grounded ? 0 : Math.max(0, p.vy) / PLAYER.maxFall)
     this.dust.update(dt)
@@ -109,10 +135,40 @@ export class MainScene extends Phaser.Scene {
     this.draw()
   }
 
+  /** The top of the floor at column x (for drawing the rest spot). */
+  private restY(x: number): number {
+    let y = ROOM_H - 5
+    while (y > 0 && this.grid.isSolid(x, y)) y--
+    return y + 1
+  }
+
+  /** For now, zero health just puts the player back at the start, whole. */
+  private respawn(): void {
+    this.health.reset()
+    Object.assign(this.player, createPlayer(SPAWN.x, SPAWN.y))
+    this.cam = { x: SPAWN.x, y: SPAWN.y }
+    this.squash.set(1, 1)
+  }
+
+  /** Keeps the bar and the body's marks in step with health. */
+  private syncHealth(): void {
+    hud.set({ health: this.health.value })
+    const key = this.health.marks.map((m) => `${m.seed}:${Math.round(m.amount)}`).join(',')
+    if (key !== this.marksKey) {
+      this.marksKey = key
+      this.body = this.health.marks.length ? this.pristine.withMarks(this.health.marks, HEALTH.fallCap) : this.pristine
+    }
+  }
+
   private draw(): void {
     const g = this.gfx
     const p = this.player
     g.clear()
+
+    // The stand-in rest spot: a pale strip on the floor that pulses gently.
+    const pulse = 0.25 + 0.15 * Math.sin(this.time.now / 400)
+    g.fillStyle(HERO, pulse)
+    for (let x = REST_SPOT.x0; x < REST_SPOT.x1; x += 2) g.fillRect(x, this.restY(x) - 1, 1, 1)
 
     for (const m of this.dust.motes) {
       g.fillStyle(DUST, Math.min(1, (m.life / m.max) * 1.4))
@@ -142,7 +198,7 @@ export class MainScene extends Phaser.Scene {
         let run = 1
         while (x + run < w && cells[y * w + x + run] === c) run++
         if (c !== BodyCell.EMPTY) {
-          g.fillStyle(BODY_COLOURS[c], 1)
+          g.fillStyle(this.hurtFlash > 0 ? (c === BodyCell.INK ? INK : DAMAGE) : BODY_COLOURS[c], 1)
           g.fillRect(left + x, top + y, run, 1)
         }
         x += run

@@ -17,6 +17,7 @@ export interface PlayerState {
   wallLock: number
   lockDir: -1 | 1
   clingPush: number // how long the player has been pushing into a wall while falling
+  fallDist: number // cells fallen since last on the ground or a wall; going up doesn't subtract
 }
 
 export interface PlayerInput {
@@ -31,13 +32,14 @@ export interface StepEvents {
   grabbed: boolean
   wallSliding: 0 | -1 | 1
   landed: number // impact strength 0–1, or -1 when there was no landing
+  fell: number // on landing: cells fallen since last on the ground or a wall (for fall damage), else 0
   skidded: boolean
 }
 
 export function createPlayer(x: number, y: number): PlayerState {
   return {
     x, y, vx: 0, vy: 0, grounded: false, coyote: 0, buffer: 0, jumpHeld: false, facing: 1,
-    airJumps: PLAYER.airJumps, onWall: 0, wallLock: 0, lockDir: 1, clingPush: 0,
+    airJumps: PLAYER.airJumps, onWall: 0, wallLock: 0, lockDir: 1, clingPush: 0, fallDist: 0,
   }
 }
 
@@ -82,7 +84,7 @@ const approach = (v: number, target: number, amount: number) =>
 export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid: SolidAt): StepEvents {
   const T = PLAYER
   const ev: StepEvents = {
-    jumped: false, doubleJumped: false, wallJumped: 0, grabbed: false, wallSliding: 0, landed: -1, skidded: false,
+    jumped: false, doubleJumped: false, wallJumped: 0, grabbed: false, wallSliding: 0, landed: -1, fell: 0, skidded: false,
   }
 
   // Jump input: buffered on press, so a slightly early press still counts.
@@ -185,6 +187,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   // Vertical.
   const wasGrounded = s.grounded
   const fallSpeed = s.vy
+  const yBefore = s.y
   let dy = s.vy * dt
   s.grounded = false
   while (Math.abs(dy) > 1e-9) {
@@ -202,6 +205,10 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     dy -= st
   }
 
+  // Count every cell of downward travel; a double jump doesn't reset it, a wall does.
+  if (s.y > yBefore) s.fallDist += s.y - yBefore
+  if (s.onWall !== 0 || ev.wallSliding !== 0) s.fallDist = 0
+
   // Walking down small bumps keeps the player on the ground instead of hopping off each one.
   if (wasGrounded && !s.grounded && s.vy >= 0 && s.onWall === 0) {
     let y = s.y
@@ -214,7 +221,11 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   if (s.onWall !== 0 && s.grounded) s.onWall = 0 // slid down to the floor
 
   if (s.grounded) s.airJumps = T.airJumps
-  if (s.grounded && !wasGrounded && fallSpeed > 80) ev.landed = Math.min(1, (fallSpeed - 80) / 280)
+  if (s.grounded && !wasGrounded) {
+    if (fallSpeed > 80) ev.landed = Math.min(1, (fallSpeed - 80) / 280)
+    ev.fell = s.fallDist
+  }
+  if (s.grounded) s.fallDist = 0
   return ev
 }
 

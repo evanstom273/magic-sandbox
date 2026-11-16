@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 // Drives the player through the dev build's window.__player hook (left out of production builds).
 test.skip(({ baseURL }) => !baseURL?.includes('5173'), 'needs the development build')
 
-type P = { x: number; y: number; vy: number; grounded: boolean; airJumps: number; sx: number; sy: number; dust: number; rings: number }
+type P = { x: number; y: number; vy: number; grounded: boolean; airJumps: number; sx: number; sy: number; dust: number; rings: number; health: number; marks: number }
 const player = (page: Page) => page.evaluate(() => (window as unknown as { __player: () => P }).__player())
 
 async function ready(page: Page, url = './') {
@@ -53,4 +53,20 @@ test('the thumbstick and Jump button work on a phone-sized screen', async ({ bro
   await jump.dispatchEvent('pointerup', { pointerId: 7 })
   await expect(page.getByRole('button', { name: 'Grab' })).toHaveCount(0)
   await context.close()
+})
+
+test('a long fall hurts, dents the body and shows on the bar; the rest spot heals it', async ({ page }) => {
+  await ready(page)
+  const bar = page.getByRole('meter', { name: 'Health' })
+  await expect(bar).toHaveAttribute('aria-valuenow', '100')
+  await page.evaluate(() => (window as unknown as { __teleport: (x: number, y: number) => void }).__teleport(225, 30))
+  await expect.poll(async () => (await player(page)).health, { timeout: 4000 }).toBeLessThan(100)
+  const hurt = await player(page)
+  expect(hurt.health).toBeGreaterThan(0)
+  expect(hurt.marks).toBe(1)
+  await expect.poll(async () => Number(await bar.getAttribute('aria-valuenow'))).toBe(Math.round(hurt.health))
+
+  await page.evaluate(() => (window as unknown as { __teleport: (x: number, y: number) => void }).__teleport(137, 150))
+  await expect.poll(async () => (await player(page)).health, { timeout: 5000 }).toBe(100)
+  expect((await player(page)).marks).toBe(0)
 })

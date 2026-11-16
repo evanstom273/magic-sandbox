@@ -2,8 +2,7 @@ import { castCost, channelCost, Mana, type Spell } from './spells.ts'
 
 // Turns cast input (press, hold, release) into casts, by the spell's casting type:
 // Instant casts once; Charged builds while held and fires on release; Channeled sustains while held;
-// Burst fires three shots; Continuous repeats shots while held. With the touch aim stick, Instant and
-// Burst fire on release instead of press ("release to cast", #81).
+// Burst fires three shots; Continuous repeats shots while held. A tap is a press and a release.
 
 export interface CastEvent {
   strength: number // 1 is a normal cast; charged spells go from 0.4 to 1.6
@@ -26,7 +25,7 @@ export class Caster {
   private held = false
 
   /** One frame. `down` is whether cast is held now. Returns the casts to make this frame. */
-  update(spell: Spell, down: boolean, dt: number, mana: Mana, castOnRelease = false): CastEvent[] {
+  update(spell: Spell, down: boolean, dt: number, mana: Mana): CastEvent[] {
     const out: CastEvent[] = []
     const pressed = down && !this.held
     const released = !down && this.held
@@ -37,7 +36,7 @@ export class Caster {
 
     switch (spell.cast) {
       case 'instant':
-        if (castOnRelease ? released : pressed) fire(1)
+        if (pressed) fire(1)
         break
       case 'charged':
         if (pressed) { this.charging = true; this.charge = 0 }
@@ -53,7 +52,7 @@ export class Caster {
         if (this.channelling) out.push({ strength: 1, sustained: true, dt })
         break
       case 'burst':
-        if (castOnRelease ? released : pressed) { this.burstLeft = BURST_SHOTS; this.burstTimer = 0 }
+        if (pressed) { this.burstLeft = BURST_SHOTS; this.burstTimer = 0 }
         break
       case 'continuous':
         if (pressed) this.repeatTimer = 0

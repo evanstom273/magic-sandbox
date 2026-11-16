@@ -5,20 +5,19 @@ import { castCost, channelCost, isValid, Mana, SHAPES, type CastType, type Spell
 const DT = 1 / 60
 const spell = (cast: CastType, shape: Spell['shape'] = 'projectile'): Spell => ({ elements: ['water'], shape, cast })
 /** Holds cast for `hold` seconds, then releases and waits `after`; returns every cast made. */
-function play(c: Caster, s: Spell, hold: number, after = 0.5, mana = new Mana(), onRelease = false) {
+function play(c: Caster, s: Spell, hold: number, after = 0.5, mana = new Mana()) {
   const out = []
-  for (let t = 0; t < hold; t += DT) out.push(...c.update(s, true, DT, mana, onRelease))
-  for (let t = 0; t < after; t += DT) out.push(...c.update(s, false, DT, mana, onRelease))
+  for (let t = 0; t < hold; t += DT) out.push(...c.update(s, true, DT, mana))
+  for (let t = 0; t < after; t += DT) out.push(...c.update(s, false, DT, mana))
   return out
 }
 
 describe('casting types', () => {
-  test('Instant casts once per press, on press (or on release with the aim stick)', () => {
-    const c = new Caster()
-    expect(play(c, spell('instant'), 0.5)).toHaveLength(1)
-    const stick = new Caster(), mana = new Mana()
-    expect(stick.update(spell('instant'), true, DT, mana, true)).toHaveLength(0)
-    expect(stick.update(spell('instant'), false, DT, mana, true)).toHaveLength(1)
+  test('Instant casts once per press, the moment it\'s pressed (a tap is enough)', () => {
+    const c = new Caster(), mana = new Mana()
+    expect(c.update(spell('instant'), true, DT, mana)).toHaveLength(1)
+    expect(c.update(spell('instant'), true, DT, mana)).toHaveLength(0)
+    expect(c.update(spell('instant'), false, DT, mana)).toHaveLength(0)
   })
 
   test('Charged builds while held and fires on release, stronger the longer it was held', () => {

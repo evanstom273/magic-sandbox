@@ -15,7 +15,7 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       width: '100%',
       height: '100%',
     },
-    input: { gamepad: true },
+    input: { gamepad: true, activePointers: 3 },
     scene: [MainScene],
   })
 }

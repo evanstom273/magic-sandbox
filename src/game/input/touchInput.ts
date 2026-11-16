@@ -4,10 +4,6 @@ export const touchInput = {
   moveX: 0,
   jump: false,
   jumpTap: false,
-  // The aim stick (#81): where it points (-1 to 1 each way) and whether it's held.
-  aimX: 0,
-  aimY: 0,
-  aiming: false,
   // A hotbar slot picked by tapping it (React sets it, the game takes it).
   pickSlot: -1,
 }

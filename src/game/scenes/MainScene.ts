@@ -3,6 +3,7 @@ import { Dust } from '../effects/dust.ts'
 import { Rings } from '../effects/rings.ts'
 import { Gather, Shatter, type CellPoint } from '../effects/shatter.ts'
 import { Caster } from '../magic/caster.ts'
+import { Dummy } from '../magic/dummies.ts'
 import { Magic, type Body } from '../magic/effects.ts'
 import { DEFAULT_HOTBAR, describe } from '../magic/hotbar.ts'
 import { elementInfo, Mana, type Spell } from '../magic/spells.ts'
@@ -31,8 +32,9 @@ export class MainScene extends Phaser.Scene {
   private hotbar: Spell[] = DEFAULT_HOTBAR.map((s) => ({ ...s, elements: [...s.elements] }))
   private slot = 0
   private aim = { x: 0, y: 0, dirX: 1, dirY: 0 } // where the catalyst points, in world cells
-  private aimSource: 'mouse' | 'pad' | 'stick' = 'mouse'
+  private aimSource: 'mouse' | 'pad' | 'touch' = 'mouse'
   private playerBody!: Body
+  private dummies: Dummy[] = []
   private worldTex!: Phaser.Textures.CanvasTexture
   private worldImg!: ImageData
   private simAcc = 0
@@ -78,9 +80,16 @@ export class MainScene extends Phaser.Scene {
     hud.set({ health: this.health.value, maxHealth: HEALTH.max })
     this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR') as Record<string, Phaser.Input.Keyboard.Key>
     this.input.mouse?.disableContextMenu()
+    // A tap on the world shorter than a frame still casts: latch where it landed until the next update.
+    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+      if (!ptr.wasTouch) return
+      const wp = ptr.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
+      this.tapLatch = { x: wp.x, y: wp.y }
+    })
     this.magic = new Magic(this.grid)
     this.playerBody = this.makePlayerBody()
-    this.magic.bodies = [this.playerBody]
+    this.dummies = [new Dummy(100, 159), new Dummy(262, 159)]
+    this.magic.bodies = [this.playerBody, ...this.dummies]
     this.syncHotbar()
     const jumpKeys = new Set(['Space', 'KeyK', 'KeyW', 'ArrowUp'])
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
@@ -102,6 +111,8 @@ export class MainScene extends Phaser.Scene {
       w.__magic = () => ({ mana: this.mana.value, slot: this.slot, projectiles: this.magic.projectiles.length, hotbar: this.hotbar, charge: this.caster.charge })
       w.__setSpell = (i: number, spell: Spell) => { this.hotbar[i] = spell; this.syncHotbar() }
       w.__infiniteMana = (on: boolean) => { this.mana.infinite = on }
+      w.__dummies = () => this.dummies.map((d) => ({ x: d.x, y: d.y, vx: d.vx, frozen: d.frozen, healed: d.healed, scorched: d.scorched }))
+      w.__runes = () => this.magic.runes.length
       w.__Material = Material
       w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
@@ -246,34 +257,37 @@ export class MainScene extends Phaser.Scene {
     }
     if (pick >= 0 && pick < this.hotbar.length && pick !== this.slot) { this.slot = pick; this.caster.reset(); this.syncHotbar() }
 
-    // Aim: the touch stick while it's held, else the gamepad's right stick when pushed, else the mouse.
+    // Aim: a finger on the world (it aims and casts there while it's down), else the gamepad's right
+    // stick when pushed, else the mouse.
     const centreY = p.y - PLAYER.height * 0.6
     const pointer = this.input.activePointer
     let down = false
-    if (touchInput.aiming || (this.aimSource === 'stick' && this.wasAiming)) {
-      this.aimSource = 'stick'
-      const m = Math.hypot(touchInput.aimX, touchInput.aimY)
-      if (m > 0.2) this.setAimDir(touchInput.aimX / m, touchInput.aimY / m, 25 + Math.min(1, m) * 75, centreY)
-      down = touchInput.aiming
+    const finger = this.input.manager.pointers.find((ptr) => ptr.wasTouch && ptr.isDown)
+    if (finger) {
+      this.aimSource = 'touch'
+      const wp = finger.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
+      this.aimAt(wp.x, wp.y, centreY)
+      down = true
+    } else if (this.tapLatch) {
+      this.aimSource = 'touch'
+      this.aimAt(this.tapLatch.x, this.tapLatch.y, centreY)
+      down = true // a tap: pressed this frame, released the next
     } else if (pad && Math.hypot(pad.rightStick.x, pad.rightStick.y) > 0.3) {
       this.aimSource = 'pad'
       const { x, y } = pad.rightStick, m = Math.hypot(x, y)
-      this.setAimDir(x / m, y / m, 25 + Math.min(1, m) * 75, centreY)
-    } else if (!pointer.wasTouch) {
-      if (pointer.x !== this.lastPointer.x || pointer.y !== this.lastPointer.y || this.aimSource === 'mouse') {
-        this.aimSource = 'mouse'
-        const wp = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
-        const dx = wp.x - p.x, dy = wp.y - centreY, m = Math.hypot(dx, dy) || 1
-        this.aim = { x: wp.x, y: wp.y, dirX: dx / m, dirY: dy / m }
-      }
+      this.aimAt(p.x + (x / m) * (25 + Math.min(1, m) * 75), centreY + (y / m) * (25 + Math.min(1, m) * 75), centreY)
+    } else if (!pointer.wasTouch && (pointer.x !== this.lastPointer.x || pointer.y !== this.lastPointer.y || this.aimSource === 'mouse')) {
+      this.aimSource = 'mouse'
+      const wp = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
+      this.aimAt(wp.x, wp.y, centreY)
       this.lastPointer = { x: pointer.x, y: pointer.y }
     }
     if (this.aimSource === 'mouse' && !pointer.wasTouch && pointer.leftButtonDown()) down = true
     if (pad && pad.R2 > 0.5) down = true
-    this.wasAiming = touchInput.aiming
+    this.tapLatch = null
 
     const spell = this.hotbar[this.slot]
-    const casts = this.caster.update(spell, down, dt, this.mana, this.aimSource === 'stick')
+    const casts = this.caster.update(spell, down, dt, this.mana)
     const tip = this.catalystTip()
     for (const ev of casts) this.magic.cast(spell, ev, tip, this.aim, this.playerBody)
     if (this.caster.channelling && Math.random() < 0.5) {
@@ -281,14 +295,19 @@ export class MainScene extends Phaser.Scene {
     }
     this.mana.update(dt, this.caster.casting)
     this.magic.update(dt)
+    for (const d of this.dummies) {
+      d.update(dt, this.grid.isSolid)
+      if (d.y > 400) Object.assign(d, { x: d.home.x, y: d.home.y, vx: 0, vy: 0 })
+    }
     hud.set({ mana: this.mana.value, charge: this.caster.charging ? this.caster.charge : 0 })
   }
   private padBumpers = { lb: false, rb: false }
   private lastPointer = { x: -1, y: -1 }
-  private wasAiming = false
+  private tapLatch: { x: number; y: number } | null = null
 
-  private setAimDir(dx: number, dy: number, dist: number, centreY: number): void {
-    this.aim = { x: this.player.x + dx * dist, y: centreY + dy * dist, dirX: dx, dirY: dy }
+  private aimAt(x: number, y: number, centreY: number): void {
+    const dx = x - this.player.x, dy = y - centreY, m = Math.hypot(dx, dy) || 1
+    this.aim = { x, y, dirX: dx / m, dirY: dy / m }
   }
 
   /** The catalyst is held in the hand on the side being aimed at (#69); its tip is where spells leave. */
@@ -513,7 +532,46 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    // Spells: projectiles, sparks, flashes, and an aim marker.
+    // Stand-in dummies: grey blocks with dot eyes, tinted by what's affecting them.
+    for (const d of this.dummies) {
+      const left = Math.round(d.x - d.w / 2), top = Math.round(d.y - d.h)
+      const body = d.frozen > 0 ? 0xa8dcf0 : d.scorched > 0 ? 0xd88a5a : d.wet > 0 ? 0x7f9fc8 : 0x8a8aa0
+      g.fillStyle(INK, 1); g.fillRect(left, top, d.w, d.h)
+      g.fillStyle(body, 1); g.fillRect(left + 1, top + 1, d.w - 2, d.h - 2)
+      g.fillStyle(INK, 1); g.fillRect(left + 3, top + 3, 1, 2); g.fillRect(left + d.w - 4, top + 3, 1, 2)
+      if (d.healed > 0) { g.fillStyle(0x4fdc6a, d.healed / 0.6); for (let i = 0; i < 4; i++) g.fillRect(left + 1 + ((i * 7 + Math.floor(this.time.now / 90)) % (d.w - 2)), top - 2 - (i % 2) * 2, 1, 1) }
+    }
+
+    // Spells: beams, runes, waves, wisps, orbiting motes, projectiles, sparks, flashes, and an aim marker.
+    for (const b of this.magic.beams) {
+      const n = Math.ceil(Math.hypot(b.x1 - b.x0, b.y1 - b.y0))
+      for (let i = 0; i <= n; i++) {
+        const t = i / Math.max(1, n)
+        g.fillStyle(b.colour, 0.55 + 0.45 * Math.random())
+        g.fillRect(Math.floor(b.x0 + (b.x1 - b.x0) * t), Math.floor(b.y0 + (b.y1 - b.y0) * t), 1, 1)
+      }
+    }
+    for (const r of this.magic.runes) {
+      const pulse = 0.5 + 0.5 * Math.sin(r.age * 5)
+      g.fillStyle(elementInfo(r.els[0]).colour, r.armed ? 0.6 + 0.4 * pulse : 0.35)
+      for (let i = 0; i < 6; i++) g.fillRect(Math.floor(r.x + Math.cos(i * 1.047) * 3), Math.floor(r.y + Math.sin(i * 1.047) * 3), 1, 1)
+      g.fillRect(Math.floor(r.x), Math.floor(r.y), 1, 1)
+    }
+    for (const w of this.magic.waves) {
+      const n = Math.max(12, Math.round(w.r * 4))
+      g.fillStyle(elementInfo(w.els[0]).colour, 0.8 * (1 - w.r / w.max) + 0.2)
+      for (let i = 0; i < n; i++) g.fillRect(Math.floor(w.x + Math.cos((i / n) * 6.283) * w.r), Math.floor(w.y + Math.sin((i / n) * 6.283) * w.r), 1, 1)
+    }
+    for (const w of this.magic.wisps) {
+      const x = Math.round(w.x), y = Math.round(w.y), c = elementInfo(w.els[0]).colour
+      g.fillStyle(c, 1)
+      g.fillRect(x - 1, y - 2, 3, 5); g.fillRect(x - 2, y - 1, 5, 3)
+      g.fillStyle(INK, 1); g.fillRect(x, y, 1, 1)
+    }
+    for (const m of this.magic.motes) {
+      g.fillStyle(elementInfo(m.els[0]).colour, 1)
+      g.fillRect(Math.floor(m.x), Math.floor(m.y), 2, 2)
+    }
     for (const f of this.magic.flashes) {
       const t = 1 - f.life / f.max
       const r = f.r * (0.4 + 0.6 * t)
@@ -531,7 +589,7 @@ export class MainScene extends Phaser.Scene {
       g.fillStyle(0xffffff, 0.8)
       g.fillRect(Math.floor(pr.x), Math.floor(pr.y), 1, 1)
     }
-    if (this.aimSource !== 'mouse') {
+    if (this.aimSource === 'pad') {
       g.fillStyle(0xffffff, 0.5)
       g.fillRect(Math.floor(this.aim.x) - 1, Math.floor(this.aim.y), 3, 1)
       g.fillRect(Math.floor(this.aim.x), Math.floor(this.aim.y) - 1, 1, 3)

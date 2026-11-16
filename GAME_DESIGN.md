@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:24:10+00:00):**
+**Where the project stands (as of 2026-11-16T22:26:37+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -258,7 +258,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 **Artifacts:**
 
-**Element Codex** (Artifact, element proposals, 2026-11-16T22:24:10+00:00): https://claude.ai/artifact/DV9k7rdGQ1bbkGHdZbkVdL. Every element in the roster (#71) and everything reactions make: what it is in the world, what casting it does, and where it's drawn in from; a grid of what each force does to each material (and to creatures); and what happens when materials meet. **Lyra picked the elements; every behaviour in it is Claude's proposal**, waiting on her review. Things it adds that weren't asked for: rot and miasma (decay's leftovers), glow-moss, storm crystals, lodestones, rifts and vents as where forces are drawn from, sand packing into stone under gravity, lightning fusing sand to glass, cold slowing then freezing creatures, light blinding and scorching dark things, void stopping at obsidian, and every element's colour (kept clear of the guide's damage red, reward gold and the hero's white).
+**Element Codex** (Artifact, element proposals, 2026-11-16T22:24:10+00:00): https://claude.ai/artifact/DV9k7rdGQ1bbkGHdZbkVdL. Also in the repository as `ELEMENT_CODEX.md` (Lyra's request, 2026-11-16T22:26:37+00:00), generated from the page (`docs/element-codex.html`) by `scripts/codex-to-md.cjs`, so the two stay the same. Every element in the roster (#71) and everything reactions make (27 in all): what it is in the world, what casting it does, and where it's drawn in from; a grid of what each force does to each material (and to creatures); and what happens when materials meet. **Lyra picked the elements; every behaviour in it is Claude's proposal**, waiting on her review. Things it adds that weren't asked for: rot and miasma (decay's leftovers), glow-moss, storm crystals, lodestones, rifts and vents as where forces are drawn from, sand packing into stone under gravity, lightning fusing sand to glass, cold slowing then freezing creatures, light blinding and scorching dark things, void stopping at obsidian, and every element's colour (kept clear of the guide's damage red, reward gold and the hero's white).
 
 **Caster Line-up** (Artifact, the player's look, 2026-11-16T22:06:27+00:00): https://claude.ai/artifact/Vk1v6qgioDqb5JFDsGK8dj. Six head-on-a-body builds in Fine cells with two eyes and a mouth, floating hands and floating feet, each enlarged and at game size on the test room's floor, switchable between idle, walking, jumping and hurt: No. 1 Block head, No. 2 Round head, No. 3 Bell (a robe-like flared body), No. 4 Tall head, No. 5 Wide body, and No. 6 Taller (14 cells; the others fit the 12 × 12 hitbox). Claude's choices, all up for change: the builds and proportions; white hands with an ink outline and dark feet; big eyes (2 × 3 cells with a highlight) on the wider heads and small ones (1 × 2) on the narrower; a two-cell mouth (a grimace when hurt); the seam between head and body; the blink, bob and walk timing.
 
@@ -459,6 +459,7 @@ Don't rush through the questions simply to get to implementation. The design pro
   - `src/game/style/tokens.ts`: the style guide's colour tokens.
   - `tests/e2e/`: Playwright. `playwright.config.ts` starts both servers it tests against.
   - `vite.config.ts`: the Pages base path (`BASE_PATH`), Tailwind, and Vitest's settings.
+  - `ELEMENT_CODEX.md`: the Element Codex as Markdown. `docs/element-codex.html` is the artifact's page; after changing it, `node scripts/codex-to-md.cjs docs/element-codex.html ELEMENT_CODEX.md` regenerates the Markdown.
   - Commands are in the README.
 - **Explain before adding** *(carried over from Lyra's previous design documents)*: before building anything, Claude says what it's about to add and how, then waits for the go-ahead.
 - **Workflow** *(Lyra's standing order across all her projects)*: after committing to the working branch, always merge straight to `main` as well; no need to ask each time.

@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Element Codex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: intro, filter chips, element cards, then the force-on-material grid and the contacts list. */
+:root {
+  --bg: #0e0f16;
+  --card: #171824;
+  --line: #2a2c40;
+  --fg: #ecebf4;
+  --muted: #a0a0b8;
+  --accent: #8fd3ff;
+  --display: "Space Grotesk", system-ui, sans-serif;
+  --body: "Inter", system-ui, sans-serif;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); }
+.wrap { max-width: 1200px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+h1 { font-family: var(--display); font-size: 28px; margin: 0; }
+h2 { font-family: var(--display); font-size: 20px; margin: 8px 0 0; }
+.lede, .sub { color: var(--muted); max-width: 75ch; margin: 6px 0 0; line-height: 1.55; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: 600 13px/1 var(--body); color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+button[aria-pressed="true"] { background: #25304c; box-shadow: inset 0 0 0 1px var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px; display: grid; gap: 8px; min-width: 0; align-content: start; }
+.card header { display: flex; align-items: center; gap: 10px; }
+.sw { width: 26px; height: 26px; border-radius: 5px; border: 2px solid #1a1a26; flex: none; background-size: 6px 6px; }
+.card h3 { font-family: var(--display); font-size: 18px; margin: 0; }
+.kind { margin-left: auto; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.card dl { margin: 0; display: grid; gap: 6px; }
+.card dt { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.card dd { margin: 0; font-size: 13.5px; line-height: 1.45; }
+.picked { font-size: 11px; color: #9be69b; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; font-size: 12.5px; min-width: 1100px; }
+th, td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; line-height: 1.35; }
+thead th { position: sticky; top: 0; background: #1c1d2b; font-family: var(--display); font-weight: 500; white-space: nowrap; }
+tbody th { background: #1a1b28; white-space: nowrap; font-family: var(--display); font-weight: 500; position: sticky; left: 0; }
+td.none { color: #555770; }
+tr.dim td, tr.dim th { opacity: 0.25; }
+.contacts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 8px; }
+.contact { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; }
+.contact b { font-family: var(--display); font-weight: 500; }
+.notes { color: var(--muted); font-size: 13.5px; line-height: 1.6; max-width: 85ch; }
+.notes strong { color: var(--fg); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Element Codex</h1>
+    <p class="lede">Every element is two things: something you cast, and something in the world that reacts. When a spell mixes elements, or materials meet, the world decides what happens, by these rules. Lyra picked the elements; <strong>everything written about them here is Claude's proposal</strong>, to strike or change.</p>
+  </header>
+
+  <div class="chips" role="group" aria-label="Show">
+    <button id="f-all" data-f="all" aria-pressed="true">All</button>
+    <button id="f-force" data-f="force">Forces</button>
+    <button id="f-liquid" data-f="liquid">Liquids</button>
+    <button id="f-solid" data-f="solid">Solids and powders</button>
+    <button id="f-made" data-f="made">Made by reactions</button>
+  </div>
+  <div class="grid" id="cards"></div>
+
+  <section>
+    <h2>What each force does to each material</h2>
+    <p class="sub">Cast a force at something and this is what happens. "Sustained" means it takes a held spell (a Beam, a channelled Cone), not a single bolt. Highlight a force by tapping its card above.</p>
+  </section>
+  <div class="table-wrap"><table id="matrix"></table></div>
+
+  <section>
+    <h2>When materials meet</h2>
+    <p class="sub">What happens on contact, with no spell involved. These are what make the world react on its own.</p>
+  </section>
+  <div class="contacts" id="contacts"></div>
+
+  <p class="notes"><strong>Notes on the proposals.</strong> Colours stay clear of the style guide's damage red and reward gold, and of the hero's white, so nothing in the world borrows those jobs. Creatures (and the player) are made of cells, so fire, acid, decay and void eat their cells away, and Life mends them. Miasma and rot are new: they're what decay leaves behind. Snow, rust and anything else not listed would be new elements, not proposed here. Numbers (how fast, how far, how long) come later, in play.</p>
+</div>
+
+<script>
+(() => {
+'use strict';
+const E = [
+  // Forces
+  { id: 'life', name: 'Life', kind: 'force', picked: 'Lyra', col: '#4fdc6a',
+    world: 'Plants grow and spread where there\'s soil, water and light; everything alive carries it; rare Life springs glow in hidden places.',
+    cast: 'Heals anything living it touches and mends their marks; grows plants on wet ground, sand, stone and wood; summons plants, little creatures, elemental creatures (Life mixed with another element) or wakes up material that\'s there.',
+    draw: 'Plants, creatures (drains them a little), Life springs.' },
+  { id: 'heat', name: 'Heat', kind: 'force', col: '#ff8a2a',
+    world: 'Fire, embers and lava give it off; it spreads to anything flammable.',
+    cast: 'Ignites wood, plants, oil and gunpowder; boils water to steam; melts ice; with sustained heat turns sand to glass, metal to molten metal and stone to lava. Burns creatures, eating their cells.',
+    draw: 'Fire, lava (drawing heat cools lava to stone).' },
+  { id: 'cold', name: 'Cold', kind: 'force', col: '#bfeaff',
+    world: 'Ice, and cold caverns where water freezes on its own.',
+    cast: 'Freezes water into ice (bridges, platforms, plugs); turns lava to obsidian and molten metal back to metal; condenses steam into rain; puts fire out. Slows creatures, then freezes them solid.',
+    draw: 'Ice (drawing cold melts it).' },
+  { id: 'lightning', name: 'Lightning', kind: 'force', col: '#fff27a',
+    world: 'Storm crystals that crackle, and charged ore.',
+    cast: 'Arcs along water, acid and metal to everything they touch; ignites flammables and sets off gunpowder; fuses sand to glass where it strikes. Stuns creatures, wet ones for longer.',
+    draw: 'Storm crystals, charged ore.' },
+  { id: 'force', name: 'Force', kind: 'force', col: '#d6d6e6',
+    world: 'Gusts from vents and cracks that push loose stuff about.',
+    cast: 'Shoves loose cells (liquids, powders, gases) and creatures away; strong enough, breaks stone to rubble and shatters glass and ice. Cast on yourself it\'s movement: a launch, a levitation, a dash.',
+    draw: 'Vents.' },
+  { id: 'decay', name: 'Decay', kind: 'force', col: '#9aa63a',
+    world: 'Rot and fungus that creep across wood and plants, giving off miasma.',
+    cast: 'Withers plants and rots wood to rot (then dust); corrodes metal to rubble, slowly; poisons creatures, rotting their cells away over time. Life and Decay cancel where they meet.',
+    draw: 'Rot, fungus, miasma.' },
+  { id: 'light', name: 'Light', kind: 'force', col: '#fff6c8',
+    world: 'Glowing crystals, and glow-moss (where Life and Light meet). The world is dark; light is precious.',
+    cast: 'Lights up the dark around where it lands, for a while; plants grow faster in it; makes glass and ice glow; blinds creatures and scorches dark ones. A sustained beam warms what it hits.',
+    draw: 'Glowing crystals, glow-moss.' },
+  { id: 'gravity', name: 'Gravity', kind: 'force', col: '#8a6cff',
+    world: 'Odd lodestones that tug at loose things around them.',
+    cast: 'Pulls loose cells and creatures towards a point, or lifts them: draw a pool of water up into a floating ball, haul sand into a heap, compact sand into stone with enough of it.',
+    draw: 'Lodestones.' },
+  { id: 'void', name: 'Void', kind: 'force', col: '#c03aff', pattern: true,
+    world: 'Rifts: rare, dangerous tears that eat what drifts into them.',
+    cast: 'Unmakes the cells it touches, digging clean holes through anything but obsidian; cast on yourself, it moves you (a blink). Eats creatures\' cells, yours included if you\'re careless.',
+    draw: 'Rifts.' },
+  // Liquids
+  { id: 'water', name: 'Water', kind: 'liquid', col: '#3a86ee',
+    world: 'Pools, streams, drips from wet ceilings.',
+    cast: 'Makes water: floods, fills, washes things away. Puts out fire, conducts lightning, freezes to ice, boils to steam, feeds plants, breaks falls, dilutes acid.',
+    draw: 'Any water.' },
+  { id: 'oil', name: 'Oil', kind: 'liquid', col: '#5a4428',
+    world: 'Dark seeps and pools; floats on water.',
+    cast: 'Makes oil: a slick that floats on water and burns long, spreading fire across a pool.',
+    draw: 'Oil seeps.' },
+  { id: 'lava', name: 'Lava', kind: 'liquid', col: '#ff6a1e',
+    world: 'Slow pools and flows deep down; lights its surroundings.',
+    cast: 'Makes lava: slow, burning, sets anything flammable alight. Water turns it to obsidian (with steam), cold to obsidian, time and drawing its heat to stone.',
+    draw: 'Lava (as a substance; its heat is Heat).' },
+  { id: 'acid', name: 'Acid', kind: 'liquid', col: '#c8ff3a',
+    world: 'Bubbling pools in old places, eating slowly at their banks.',
+    cast: 'Makes acid: eats stone, metal, sand, wood, plants and bodies cell by cell, used up as it goes, giving off smoke. Obsidian and glass resist it; water dilutes it.',
+    draw: 'Acid pools.' },
+  // Solids and powders
+  { id: 'sand', name: 'Sand', kind: 'solid', col: '#e0bf6e',
+    world: 'Dunes, drifts and loose ceilings that pour when disturbed.',
+    cast: 'Makes sand: falls, piles, buries, plugs gaps, cushions falls. Heat turns it to glass; lightning fuses it where it strikes; enough gravity packs it into stone.',
+    draw: 'Sand.' },
+  { id: 'stone', name: 'Stone', kind: 'solid', col: '#7a7486',
+    world: 'Most of the world.',
+    cast: 'Makes stone: walls, bridges, stairs, plugs. Force breaks it to rubble; acid eats it; enough heat melts it to lava.',
+    draw: 'Stone.' },
+  { id: 'gunpowder', name: 'Gunpowder', kind: 'solid', col: '#4a4652', pattern: true,
+    world: 'Seams in the rock and old caches.',
+    cast: 'Makes gunpowder: a trail or a heap that explodes with heat, fire, lava or lightning, blasting terrain and anything nearby.',
+    draw: 'Gunpowder.' },
+  { id: 'metal', name: 'Metal', kind: 'solid', col: '#9aa4b0',
+    world: 'Ore veins and old structures.',
+    cast: 'Makes metal: heavy and tough (force won\'t break it); conducts lightning; sustained heat melts it to molten metal, which sets again; decay and acid wear it down slowly.',
+    draw: 'Metal.' },
+  // Made by reactions
+  { id: 'steam', name: 'Steam', kind: 'made', col: '#c8d0dc', world: 'Water plus heat. Rises, scalds creatures, condenses back to water on cold or after a while (rain from the ceiling).', cast: 'Castable once drawn in: a scalding cloud that rises.', draw: 'Steam.' },
+  { id: 'smoke', name: 'Smoke', kind: 'made', col: '#4a4a56', world: 'Anything burning, and acid eating. Rises, hides what\'s behind it, fades.', cast: 'Castable once drawn in: a cloud to hide in or behind.', draw: 'Smoke.' },
+  { id: 'fire', name: 'Fire', kind: 'made', col: '#ffb03a', world: 'Burning cells. Spreads along wood, plants and oil; rises; dies to smoke; water puts it out.', cast: 'Not cast directly: Heat on anything flammable makes it.', draw: 'Gives Heat.' },
+  { id: 'ice', name: 'Ice', kind: 'made', col: '#a8dcf0', world: 'Water plus cold. Solid and slippery; melts with heat; force shatters it.', cast: 'Castable once drawn in: instant platforms and walls.', draw: 'Ice (also gives Cold).' },
+  { id: 'obsidian', name: 'Obsidian', kind: 'made', col: '#2e2040', world: 'Lava plus water or cold. The toughest thing: resists acid, void and almost all force.', cast: 'Castable once drawn in: an expensive, near-unbreakable wall.', draw: 'Obsidian.' },
+  { id: 'glass', name: 'Glass', kind: 'made', col: '#cfe8ef', world: 'Sand plus heat or lightning. Clear, brittle (force shatters it back to sand), resists acid, lets light through and glows with it.', cast: 'Castable once drawn in: see-through walls and windows.', draw: 'Glass.' },
+  { id: 'rubble', name: 'Rubble', kind: 'made', col: '#6a6474', world: 'Stone broken by force; corroded metal. A coarse powder that falls and piles like sand.', cast: 'Castable once drawn in: like sand, but it won\'t melt to glass.', draw: 'Rubble.' },
+  { id: 'molten', name: 'Molten metal', kind: 'made', col: '#ffd27a', world: 'Metal plus sustained heat. A heavy, burning liquid that sets back into metal (fast with water or cold).', cast: 'Castable once drawn in: pour it into a gap and let it set.', draw: 'Molten metal.' },
+  { id: 'plants', name: 'Plants and wood', kind: 'made', col: '#4fae4a', world: 'Life\'s doing: grass, moss, vines, roots and trees. Grow with water and light; burn; rot with decay. Moss softens falls.', cast: 'Castable once drawn in, or grown with Life.', draw: 'Plants and wood (also give Life).' },
+  { id: 'rot', name: 'Rot and miasma', kind: 'made', col: '#7a8a3a', world: 'Decay\'s leftovers: rot creeps across wood and plants; miasma is a low poison gas that hurts the living. Life clears both; fire burns miasma off.', cast: 'Castable once drawn in: a lingering poison cloud.', draw: 'Gives Decay.' },
+];
+
+const KIND_NAME = { force: 'Force', liquid: 'Liquid', solid: 'Solid', made: 'Made by reactions' };
+const cards = document.getElementById('cards');
+for (const e of E) {
+  const el = document.createElement('article');
+  el.className = 'card'; el.dataset.kind = e.kind; el.dataset.id = e.id;
+  const bg = e.pattern ? `background-color:${e.col};background-image:radial-gradient(#0008 1px, transparent 1.5px)` : `background:${e.col}`;
+  el.innerHTML = `<header><span class="sw" style="${bg}"></span><h3>${e.name}</h3><span class="kind">${KIND_NAME[e.kind]}</span></header>
+    <dl><div><dt>In the world</dt><dd>${e.world}</dd></div><div><dt>Cast</dt><dd>${e.cast}</dd></div><div><dt>Draw it in from</dt><dd>${e.draw}</dd></div></dl>
+    ${e.picked ? `<span class="picked">Lyra's element</span>` : ''}`;
+  if (e.kind === 'force') { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', `Highlight ${e.name} in the grid`); el.style.cursor = 'pointer'; el.addEventListener('click', () => highlight(e.id)); el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); highlight(e.id) } }) }
+  cards.appendChild(el);
+}
+document.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  const f = b.dataset.f;
+  document.querySelectorAll('.card').forEach((c) => { c.hidden = f !== 'all' && c.dataset.kind !== f });
+}));
+
+// Forces down the side, materials across the top.
+const COLS = ['Water', 'Oil', 'Lava', 'Acid', 'Sand', 'Stone', 'Gunpowder', 'Metal', 'Wood and plants', 'Ice', 'Steam', 'Creatures'];
+const M = {
+  life:      ['Wet ground sprouts', '', '', '', 'Grass, if wet', 'Moss creeps over it', '', '', 'Grows, spreads, heals rot', '', '', 'Heals, mends marks'],
+  heat:      ['Boils to steam', 'Ignites, burns long', '', 'Boils off as fumes', 'Sustained: glass', 'Sustained, intense: lava', 'Explodes', 'Sustained: molten metal', 'Burns', 'Melts to water', '', 'Burns, eating cells'],
+  cold:      ['Freezes to ice', 'Thickens, slows', 'Obsidian', '', '', '', '', '', 'Frosts, slows growth', '', 'Condenses to water', 'Slows, then freezes'],
+  lightning: ['Electrifies all it touches', 'Ignites', '', 'Electrifies', 'Fuses to glass', '', 'Explodes', 'Conducts along it', 'Ignites', '', '', 'Stuns (longer if wet)'],
+  force:     ['Pushes, splashes', 'Pushes', 'Pushes (splashes burn)', 'Pushes', 'Blows away', 'Strong: breaks to rubble', 'Scatters', 'Too heavy to move', 'Breaks thin branches', 'Shatters', 'Blows away', 'Knocks back'],
+  decay:     ['', '', '', '', '', '', '', 'Corrodes to rubble, slowly', 'Rots, then dust; gives off miasma', '', '', 'Poisons, rotting cells'],
+  light:     ['', '', '', '', '', '', '', 'Reflects', 'Grows faster', 'Glows', '', 'Blinds; scorches dark things'],
+  gravity:   ['Pulls into a floating ball', 'Floats', 'Floats', 'Floats', 'Heaps; packs to stone', 'Pulls loose stone', 'Heaps', '', '', '', 'Gathers', 'Pulls in, or lifts'],
+  void:      ['Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Cells unmade'],
+};
+const table = document.getElementById('matrix');
+table.innerHTML = `<thead><tr><th scope="col">Force ↓ on →</th>${COLS.map((c) => `<th scope="col">${c}</th>`).join('')}</tr></thead><tbody>${
+  Object.entries(M).map(([id, row]) => `<tr data-id="${id}"><th scope="row">${E.find((e) => e.id === id).name}</th>${row.map((r) => r ? `<td>${r}</td>` : `<td class="none">—</td>`).join('')}</tr>`).join('')
+}</tbody>`;
+let lit = null;
+function highlight(id) {
+  lit = lit === id ? null : id;
+  table.querySelectorAll('tbody tr').forEach((tr) => tr.classList.toggle('dim', lit !== null && tr.dataset.id !== lit));
+  if (lit) table.closest('.table-wrap').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+}
+
+const C = [
+  ['Lava + water', 'Obsidian and a burst of steam.'],
+  ['Lava + ice', 'Ice melts to water (then that water meets the lava).'],
+  ['Lava + wood, plants or oil', 'They catch fire.'],
+  ['Lava + gunpowder', 'Explodes.'],
+  ['Lava + metal', 'Metal slowly melts to molten metal.'],
+  ['Lava + sand', 'Sand slowly turns to glass.'],
+  ['Fire + wood, plants or oil', 'Fire spreads into them.'],
+  ['Fire + water', 'Fire goes out with a puff of steam.'],
+  ['Fire + ice', 'Ice melts.'],
+  ['Fire + gunpowder', 'Explodes.'],
+  ['Fire + miasma', 'Miasma burns off.'],
+  ['Acid + stone, metal, sand, rubble, wood, plants or bodies', 'Eaten cell by cell; the acid is used up as it goes and gives off smoke.'],
+  ['Acid + water', 'The acid is diluted: it slowly turns to water.'],
+  ['Acid + obsidian or glass', 'Nothing: they hold it.'],
+  ['Water + plants', 'Plants grow; dry plants wither slowly.'],
+  ['Water + molten metal', 'Sets into metal, with steam.'],
+  ['Oil + water', 'Oil floats on top.'],
+  ['Sand or rubble + any liquid', 'Sinks through it.'],
+  ['Steam + a ceiling or cold', 'Condenses into water drops: rain.'],
+  ['Rot + wood or plants', 'Rot spreads into them.'],
+  ['Life + rot or miasma', 'Cleared.'],
+  ['Storm crystal + water', 'Every so often, the water is electrified.'],
+  ['A creature + steam, fire or lava', 'Burned: cells eaten.'],
+  ['A creature + Life spring', 'Healed.'],
+];
+const contacts = document.getElementById('contacts');
+contacts.innerHTML = C.map(([a, b]) => `<div class="contact"><b>${a}:</b> ${b}</div>`).join('');
+})();
+</script>
+
+</body>
+</html>

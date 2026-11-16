@@ -1,6 +1,6 @@
 # magic-sandbox
 
-The design lives in [`GAME_DESIGN.md`](GAME_DESIGN.md); the art style in [`stylised-geometry/`](stylised-geometry/).
+The design lives in [`GAME_DESIGN.md`](GAME_DESIGN.md); the elements' proposed behaviour in [`ELEMENT_CODEX.md`](ELEMENT_CODEX.md); the art style in [`stylised-geometry/`](stylised-geometry/).
 
 Live at https://evanstom273.github.io/magic-sandbox/, deployed from `main` by GitHub Actions.
 

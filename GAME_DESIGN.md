@@ -170,6 +170,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
 - **The characters are in Lyra's Stylised Geometry style.** The world is voxels~~; how much of the guide applies to it is open (§E)~~, with Terraria's look (#11). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
+- **Cell size: Fine** ("All day long"), from the Magic Sandbox: the room is 320 × 180 cells and the stand-in caster about 8 cells wide. Chosen over Medium and Chunky. *(2026-11-16T20:59:12+00:00 — History #34)*
+- **Characters are made of voxels too**, keeping the Stylised Geometry character style: the player, NPCs and every other character are drawn in cells like the world. Lyra's idea. *(2026-11-16T20:59:12+00:00 — History #35)*
 - **The style guide is a guide, not gospel.** Lyra, restating it for this game: it informs the look, it doesn't set rules the game has to follow. *(2026-11-16T20:13:02+00:00, documentation time — History #13)*
 
 ### Technical architecture / platform
@@ -178,6 +180,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ### Development approach
 - **The scaffold was approved as proposed** (Lyra: "Yes scaffold"): the stealth game's, without Cloudflare. Strict TypeScript, Tailwind, Phaser 4 with one empty scene inside a React component, and the guide's colour tokens; no Dexie until something needs saving. *(2026-11-16T20:07:36+00:00, documentation time — History #5)*
+
+- **First piece in the game: just the player.** A blank square with movement, jumping, squash and stretch and the style's particles, before anything else. *(2026-11-16T20:59:12+00:00 — History #36)*
 
 ### Testing
 - **Vitest for logic, plus a Playwright smoke test** that boots the game in a real browser and fails if the canvas doesn't appear or anything errors. The same as the stealth game's; Claude's recommendation, approved with the scaffold. *(2026-11-16T20:07:36+00:00, documentation time — History #6)*
@@ -215,7 +219,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
 7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
 8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
-9. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
+9. ~~**Cell size.**~~ Fine (#34). Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 10. **Weapons** (#33): what they are, how they sit beside magic (which was picked as the main way to fight in #14's options), and how they're got.
 
 ---
@@ -297,6 +301,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 31 | 2026-11-16T20:31:38+00:00 | Magic | Each shape allows the casting types that make sense for it; the player picks among them (Claude's recommendation, approved). |
 | 32 | 2026-11-16T20:31:38+00:00 | Magic | Starting triggers: on impact, after a delay, when something comes near, on recast. |
 | 33 | 2026-11-16T20:31:38+00:00 | Combat | Weapons exist alongside magic; Weapon enchantment enchants them. |
+| 34 | 2026-11-16T20:59:12+00:00 | World | Cell size: Fine (from the Magic Sandbox). |
+| 35 | 2026-11-16T20:59:12+00:00 | Art | Characters (player, NPCs, everything) are made of voxels too, in the Stylised Geometry style (Lyra's idea). |
+| 36 | 2026-11-16T20:59:12+00:00 | Workflow | First piece in the game: just the player, a blank square with movement, jumping, squash and stretch and particles. |
 
 ---
 

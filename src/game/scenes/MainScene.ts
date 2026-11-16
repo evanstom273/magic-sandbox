@@ -42,7 +42,7 @@ export class MainScene extends Phaser.Scene {
     this.gfx = this.add.graphics()
     this.player = createPlayer(SPAWN.x, SPAWN.y)
     this.body = CellBody.square(PLAYER.size)
-    this.keys = this.input.keyboard!.addKeys('A,D,W,S,LEFT,RIGHT,UP,DOWN,SPACE,K,SHIFT,J') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = this.input.keyboard!.addKeys('A,D,W,S,LEFT,RIGHT,UP,DOWN,SPACE,K') as Record<string, Phaser.Input.Keyboard.Key>
 
     this.cameras.main.setBounds(0, 0, ROOM_W, ROOM_H)
     this.fitCamera()
@@ -67,7 +67,6 @@ export class MainScene extends Phaser.Scene {
     let move = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0) || touchInput.moveX
     let climb = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0) || touchInput.moveY
     let jump = k.SPACE.isDown || k.K.isDown || touchInput.jump
-    let grab = k.SHIFT.isDown || k.J.isDown || touchInput.grab
     const pad = this.input.gamepad?.pad1
     if (pad) {
       const { x, y } = pad.leftStick
@@ -78,9 +77,8 @@ export class MainScene extends Phaser.Scene {
       if (pad.up) climb = -1
       if (pad.down) climb = 1
       if (pad.A) jump = true
-      if (pad.R1 > 0 || pad.R2 > 0.5) grab = true
     }
-    return { move, climb, jump, grab }
+    return { move, climb, jump }
   }
 
   update(_time: number, deltaMs: number): void {

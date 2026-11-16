@@ -51,6 +51,6 @@ test('the thumbstick and Jump button work on a phone-sized screen', async ({ bro
   await jump.dispatchEvent('pointerdown', { pointerId: 7 })
   await expect.poll(async () => (await player(page)).grounded).toBe(false)
   await jump.dispatchEvent('pointerup', { pointerId: 7 })
-  await expect(page.getByRole('button', { name: 'Grab' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Grab' })).toHaveCount(0)
   await context.close()
 })

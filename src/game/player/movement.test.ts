@@ -7,7 +7,7 @@ const flat = (extra: SolidAt = () => false): SolidAt => (x, y) => y >= 100 || ex
 // A tall wall to the right, from x = 80.
 const withWall = flat((x) => x >= 80)
 const DT = 1 / 60
-const input = (i: Partial<PlayerInput> = {}): PlayerInput => ({ move: 0, climb: 0, jump: false, grab: false, ...i })
+const input = (i: Partial<PlayerInput> = {}): PlayerInput => ({ move: 0, climb: 0, jump: false, ...i })
 const idle = input()
 
 function run(s: PlayerState, inp: PlayerInput, seconds: number, solid: SolidAt = flat()) {
@@ -95,51 +95,79 @@ describe('double jump', () => {
     expect(s.airJumps).toBe(PLAYER.airJumps)
   })
 
-  test('grabbing a wall gives it back', () => {
+  test('clinging to a wall gives it back', () => {
     const s = standing(50, withWall) // far enough from the wall that a jump isn't a wall jump
     run(s, input({ jump: true }), 0.15, withWall)
     run(s, idle, 0.03, withWall)
     expect(stepPlayer(s, input({ jump: true }), DT, withWall).doubleJumped).toBe(true)
     expect(s.airJumps).toBe(0)
     s.x = 80 - PLAYER.size / 2 // now beside the wall, still in the air
-    run(s, input({ grab: true }), 0.1, withWall)
+    while (s.vy < 0) stepPlayer(s, idle, DT, withWall)
+    run(s, input({ move: 1 }), 0.05, withWall)
     expect(s.climbing).toBe(1)
     expect(s.airJumps).toBe(PLAYER.airJumps)
   })
 })
 
-describe('walls', () => {
-  // Hanging beside the wall, in the air, well above the floor.
-  function onWall() {
+describe('walls (auto grab)', () => {
+  // Beside the wall, in the air, well above the floor.
+  function nextToWall() {
     const s = createPlayer(80 - PLAYER.size / 2, 60)
     s.airJumps = 0
     return s
   }
+  function clinging() {
+    const s = nextToWall()
+    run(s, input({ move: 1 }), 0.05, withWall)
+    expect(s.climbing).toBe(1)
+    return s
+  }
 
-  test('pushing into a wall in the air slides down it slowly', () => {
-    const s = onWall()
-    const ev = run(s, input({ move: 1 }), 0.5, withWall)
-    expect(ev.at(-1)!.wallSliding).toBe(1)
-    expect(s.vy).toBeLessThanOrEqual(PLAYER.wallSlideMax)
-  })
-
-  test('holding Grab clings with no time limit, and climbs up and down', () => {
-    const s = onWall()
-    run(s, input({ grab: true }), 5, withWall)
+  test('pushing into a wall in the air clings to it, with no time limit and nothing held', () => {
+    const s = nextToWall()
+    const ev = run(s, input({ move: 1 }), 0.05, withWall)
+    expect(ev.some((e) => e.grabbed)).toBe(true)
+    run(s, idle, 5, withWall)
     expect(s.climbing).toBe(1)
     expect(s.y).toBeCloseTo(60, 0)
-    run(s, input({ grab: true, climb: -1 }), 0.5, withWall)
+  })
+
+  test('a jump rising alongside a wall is not cut short by a cling', () => {
+    const s = standing(80 - PLAYER.size / 2, withWall)
+    stepPlayer(s, input({ move: 1, jump: true }), DT, withWall)
+    run(s, input({ move: 1, jump: true }), 0.2, withWall)
+    expect(s.climbing).toBe(0)
+    expect(s.vy).toBeLessThan(0)
+  })
+
+  test('pressing up against a wall on the ground starts a climb', () => {
+    const s = standing(80 - PLAYER.size / 2, withWall)
+    run(s, input({ climb: -1 }), 0.3, withWall)
+    expect(s.climbing).toBe(1)
+    expect(s.y).toBeLessThan(100 - 5)
+  })
+
+  test('climbs up and down; climbing down is the slide; pushing away lets go', () => {
+    const s = clinging()
+    run(s, input({ climb: -1 }), 0.5, withWall)
     expect(s.y).toBeCloseTo(60 - PLAYER.climbUpSpeed * 0.5, 0)
-    run(s, input({ grab: true, climb: 1 }), 0.25, withWall)
+    const ev = run(s, input({ climb: 1 }), 0.25, withWall)
+    expect(ev.at(-1)!.wallSliding).toBe(1)
     expect(s.y).toBeGreaterThan(60 - PLAYER.climbUpSpeed * 0.5)
-    run(s, idle, 0.05, withWall)
+    run(s, input({ move: -1 }), DT, withWall)
     expect(s.climbing).toBe(0)
   })
 
-  test('jumping off a wall kicks away, and input cannot pull straight back for a moment', () => {
-    const s = onWall()
-    run(s, input({ grab: true }), 0.1, withWall)
-    const ev = stepPlayer(s, input({ grab: true, move: -1, jump: true }), DT, withWall)
+  test('climbing down to the floor lets go', () => {
+    const s = clinging()
+    run(s, input({ climb: 1 }), 1.5, withWall)
+    expect(s.grounded).toBe(true)
+    expect(s.climbing).toBe(0)
+  })
+
+  test('jumping away from a wall kicks off, and input cannot pull straight back for a moment', () => {
+    const s = clinging()
+    const ev = stepPlayer(s, input({ move: -1, jump: true }), DT, withWall)
     expect(ev.wallJumped).toBe(1)
     expect(s.vx).toBeLessThan(0)
     expect(s.vy).toBeLessThan(0)
@@ -148,18 +176,17 @@ describe('walls', () => {
     expect(s.x).toBeLessThan(x)
   })
 
-  test('a wall jump also works without grabbing, from a cell or two away', () => {
-    const s = onWall()
+  test('a wall jump also works from a cell or two away', () => {
+    const s = nextToWall()
     s.x -= 1.5
     run(s, idle, 0.05, withWall)
     expect(stepPlayer(s, input({ jump: true }), DT, withWall).wallJumped).toBe(1)
   })
 
-  test('jumping while grabbing with no direction hops straight up the wall', () => {
-    const s = onWall()
-    run(s, input({ grab: true }), 0.1, withWall)
+  test('jumping while clinging with no direction hops straight up the wall', () => {
+    const s = clinging()
     const x = s.x
-    const ev = stepPlayer(s, input({ grab: true, jump: true }), DT, withWall)
+    const ev = stepPlayer(s, input({ jump: true }), DT, withWall)
     expect(ev.climbJumped).toBe(true)
     expect(s.vy).toBeLessThan(-PLAYER.climbJumpSpeed * 0.9)
     expect(s.x).toBeCloseTo(x, 5)
@@ -168,10 +195,10 @@ describe('walls', () => {
   test('climbing past the top of a wall pops up onto it', () => {
     const ledge = flat((x, y) => x >= 80 && y >= 70)
     const s = createPlayer(80 - PLAYER.size / 2, 90)
-    run(s, input({ grab: true }), 0.05, ledge)
+    run(s, input({ move: 1 }), 0.05, ledge)
     expect(s.climbing).toBe(1)
     let hopped = false
-    for (let t = 0; t < 2 && !hopped; t += DT) hopped = stepPlayer(s, input({ grab: true, climb: -1, move: 1 }), DT, ledge).ledgeHopped
+    for (let t = 0; t < 2 && !hopped; t += DT) hopped = stepPlayer(s, input({ climb: -1, move: 1 }), DT, ledge).ledgeHopped
     expect(hopped).toBe(true)
     run(s, input({ move: 1 }), 1, ledge)
     expect(s.grounded).toBe(true)

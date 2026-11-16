@@ -22,7 +22,6 @@ export interface PlayerInput {
   move: number // -1 to 1, left and right
   climb: number // -1 to 1, up and down
   jump: boolean // held
-  grab: boolean // held
 }
 
 export interface StepEvents {
@@ -98,21 +97,28 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   if (s.wallLock > 0) move = s.lockDir
   const climb = Math.max(-1, Math.min(1, input.climb))
 
-  // Grabbing: hold Grab beside a wall to cling. No stamina limit.
+  // Auto grab: push into a wall while not rising (or press up against one on the ground) to cling.
+  // Once on, the player stays without holding anything; pushing away lets go. No stamina limit.
   const touching = wallNear(solid, s, 1)
-  if (input.grab && touching !== 0 && s.wallLock <= 0) {
-    if (s.climbing === 0) {
-      ev.grabbed = true
+  const pushing = move === 0 ? 0 : move > 0 ? 1 : -1
+  if (s.climbing !== 0) {
+    if (touching !== s.climbing || pushing === -s.climbing) s.climbing = 0
+  } else if (touching !== 0 && s.wallLock <= 0) {
+    const fromAir = !s.grounded && s.vy >= 0 && pushing === touching
+    const fromGround = s.grounded && climb < 0
+    if (fromAir || fromGround) {
+      s.climbing = touching
       s.airJumps = T.airJumps
+      ev.grabbed = true
     }
-    s.climbing = touching
-  } else s.climbing = 0
+  }
 
   if (s.climbing !== 0) {
     const side = s.climbing
     s.facing = side
     s.vx = 0
     s.vy = climb < 0 ? -T.climbUpSpeed * -climb : climb > 0 ? T.climbDownSpeed * climb : 0
+    if (climb > 0) ev.wallSliding = side // climbing down is the wall slide
 
     // Climbed past the top of the wall: pop up onto it.
     if (climb < 0 && !wallBeside(solid, s, side, 1, 0, Math.floor(PLAYER.size / 2))) {
@@ -221,6 +227,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     }
   }
   if (!s.grounded && s.vy >= 0 && boxHits(solid, s.x, s.y + 0.5)) s.grounded = true
+  if (s.climbing !== 0 && s.grounded && climb >= 0) s.climbing = 0 // climbed down to the floor
 
   if (s.grounded) s.airJumps = T.airJumps
   if (s.grounded && !wasGrounded && fallSpeed > 80) ev.landed = Math.min(1, (fallSpeed - 80) / 280)

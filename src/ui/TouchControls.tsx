@@ -16,7 +16,7 @@ function capture(e: PointerEvent<HTMLElement>) {
   }
 }
 
-function HoldButton({ k, label, children, small }: { k: 'jump' | 'grab'; label: string; children: string; small?: boolean }) {
+function HoldButton({ k, label, children }: { k: 'jump'; label: string; children: string }) {
   const up = () => {
     touchInput[k] = false
   }
@@ -32,7 +32,7 @@ function HoldButton({ k, label, children, small }: { k: 'jump' | 'grab'; label: 
       onPointerUp={up}
       onPointerCancel={up}
       onLostPointerCapture={up}
-      className={`pointer-events-auto select-none rounded-full border border-white/15 bg-white/10 font-semibold text-white/80 active:bg-white/25 ${small ? 'h-14 w-14 text-xs' : 'h-20 w-20 text-sm'}`}
+      className="pointer-events-auto h-20 w-20 select-none rounded-full border border-white/15 bg-white/10 text-sm font-semibold text-white/80 active:bg-white/25"
     >
       {children}
     </button>
@@ -92,17 +92,14 @@ function Thumbstick() {
   )
 }
 
-// On-screen controls for phones and tablets: the thumbstick bottom left, Jump and Grab bottom right.
+// On-screen controls for phones and tablets: the thumbstick bottom left, Jump bottom right.
 export function TouchControls() {
   const [show] = useState(wantsTouch)
   if (!show) return null
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-[max(16px,env(safe-area-inset-left))] pb-[max(16px,env(safe-area-inset-bottom))]">
       <Thumbstick />
-      <div className="flex items-end gap-3">
-        <HoldButton k="grab" label="Grab" small>Grab</HoldButton>
-        <HoldButton k="jump" label="Jump">Jump</HoldButton>
-      </div>
+      <HoldButton k="jump" label="Jump">Jump</HoldButton>
     </div>
   )
 }

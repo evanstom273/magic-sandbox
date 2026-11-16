@@ -16,9 +16,9 @@ export const PLAYER = {
   // Extra movement (no magic).
   airJumps: 1, // double jump; comes back on landing or on a wall
   doubleJumpSpeed: 180,
-  wallSlideMax: 60, // fall speed while pushing into a wall
+  wallSlideMax: 60, // fall speed down a wall while the input lock stops a cling (climbing down is the usual slide)
   climbUpSpeed: 40,
-  climbDownSpeed: 60,
+  climbDownSpeed: 60, // also the wall slide
   wallJumpSpeedX: 95,
   wallJumpSpeedY: 190,
   wallJumpLock: 0.16, // after a wall jump, input can't pull you straight back for this long

@@ -18,13 +18,14 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:00:54+00:00):**
+**Where the project stands (as of 2026-11-16T22:06:27+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): a Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`.
 - Magic Sandbox Artifact made; Fine cells chosen from it (History #34). Characters are voxels too (History #35).
 - **The player is in the game, as a blank square** (History #36–#40): a 12-cell body of real cells in a test room, with walking, jumping, squash and stretch and dust, playable with keyboard, gamepad and touch. Since then: a double jump and Celeste-style wall climbing and wall jumps (History #41–#46), now with auto grab (History #47), made less sticky after Lyra's first playtest (History #48), and only holding on while pushing towards the wall (History #49). No climbing now: walls are held, slid down and kicked off, and scaled by wall-jumping and steering back (History #50). **Health and fall damage built** (History #51–#61): a health bar, falls that dent the body, a stand-in rest spot to heal, and a death that shatters the body and waits for Jump before the player gathers back at the start (History #62). Waiting on Lyra's playtest.
+- **Designing the player's look** (History #63–#66): a head on a body, two eyes and a mouth, floating hands and floating feet; the Caster Line-up shows six builds to choose from.
 - Top-level design from Lyra (History #7–#13).
 - Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24); round 4 drawing elements in, shapes and triggers from the start, what catalysts do, and holding one at a time (History #25–#28). Shapes and casting types come from Lyra's Magic Mod (History #29, #30); round 5 settled how casting types fit, the starting triggers, and that weapons exist (History #31–#33).
 
@@ -169,6 +170,13 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Four triggers to start with** (all four picked): **on impact**, **after a delay**, **when something comes near** (a creature or the player), and **on recast** (cast again to set it off). *(2026-11-16T20:31:38+00:00 — History #32)*
 - **Weapons exist too,** alongside magic, and **Weapon enchantment enchants them.** Chosen over enchanting the catalyst (Claude's recommendation) and dropping the shape. What the weapons are is open. *(2026-11-16T20:31:38+00:00 — History #33)*
 
+### The player's look
+- **Look first, story later:** design how the player looks and moves now; who they are comes with the story. Chosen over a young mage, an experimenter and a little construct. *(2026-11-16T22:06:27+00:00 — History #63)*
+- **A head on a body,** not the plain square: more of a figure, less of a block. Chosen over keeping the square (Claude's recommendation), a rounded square and a taller rectangle. *(2026-11-16T22:06:27+00:00 — History #64)*
+- **Two eyes and a mouth.** Chosen over two eyes alone (Claude's recommendation), one eye, and eyes in shadow. *(2026-11-16T22:06:27+00:00 — History #65)*
+- **Floating feet,** the style guide's way: dark feet that float under and partly behind the body and move on their own. Chosen over stubby legs and longer legs. *(2026-11-16T22:06:27+00:00 — History #66)*
+- **The floating hands** are Lyra's, from the start of this round. *(2026-11-16T22:06:27+00:00)*
+
 ### Player movement
 *Extra movement that doesn't need magic.*
 - **A double jump:** one extra jump in the air, with the guide's 0.8 × 1.22 stretch and a ring. Lyra's request. *(2026-11-16T21:13:37+00:00 — History #41)*
@@ -236,6 +244,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 **Artifacts:**
 
+**Caster Line-up** (Artifact, the player's look, 2026-11-16T22:06:27+00:00): https://claude.ai/artifact/Vk1v6qgioDqb5JFDsGK8dj. Six head-on-a-body builds in Fine cells with two eyes and a mouth, floating hands and floating feet, each enlarged and at game size on the test room's floor, switchable between idle, walking, jumping and hurt: No. 1 Block head, No. 2 Round head, No. 3 Bell (a robe-like flared body), No. 4 Tall head, No. 5 Wide body, and No. 6 Taller (14 cells; the others fit the 12 × 12 hitbox). Claude's choices, all up for change: the builds and proportions; white hands with an ink outline and dark feet; big eyes (2 × 3 cells with a highlight) on the wider heads and small ones (1 × 2) on the narrower; a two-cell mouth (a grimace when hurt); the seam between head and body; the blink, bob and walk timing.
+
 **Magic Sandbox** (Artifact, first cut, 2026-11-16T20:52:52+00:00): https://claude.ai/artifact/6vJkRt4FAt1BMiRto3XuzX. Requested by Lyra to feel the magic and settle cell size. A falling-sand room (a water pool, an oil pool, a lava pit, a sand pile on a ledge, a wooden bridge, icicles and an ice ledge) where a stand-in caster casts six elements (Water, Oil, Sand, Lava, Heat, Cold) as a Projectile or a Cone, with a mana bar, at three cell sizes (Fine 320 × 180 cells, Medium 160 × 90, Chunky 80 × 45, all the same room). Deliberately small: no other shapes, triggers, spell builder, drawing in or creatures yet; those come in later passes. Claude's choices, all up for change: the room; the stand-in caster (the style guide's white square with eyes and floating hands, not a design for the player) and its catalyst as a rod with a gem in the element's colour; every colour; the reactions (heat turns water to steam, melts ice, sets wood and oil alight; cold freezes water, turns lava to obsidian, condenses steam, puts fire out; lava and water make obsidian and steam; steam rises and partly rains back as water; fire spreads along wood and oil and leaves smoke); mana at 100, refilling 14 a second, with bolts costing 5 to 12 and the Cone 2.2 times that per second; the Projectile's arc and burst size; the Cone's spread and reach; the caster can't be hurt, and lava bounces it out. Switching cell size or resetting rebuilds the room.
 
 ---
@@ -251,7 +261,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 ## E. Open Questions
 
 1. **Title.**
-2. **The concept:** ~~what the game is~~ (#7–#10); who the player is.
+2. **The concept:** ~~what the game is~~ (#7–#10); who the player is (story later, #63).
 3. ~~**Stack.**~~ The stealth game's, on GitHub Pages for now (#3, #4).
 4. **Platforms and input.**
 5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
@@ -396,6 +406,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 60 | 2026-11-16T21:44:11+00:00 | Health | Death decided later, with the game's structure; respawn at the start for testing (Claude's recommendation, approved). |
 | 61 | 2026-11-16T21:48:38+00:00 | Workflow | Health build plan approved, with Claude's starting values and stand-ins (rest spot, respawn at the start). |
 | 62 | 2026-11-16T21:56:53+00:00 | Health | Death: the body shatters into its cells (slow motion), the game waits for Jump, and the player gathers back from cells at the start (shatter and gather: Claude's recommendations, approved; press to continue: Lyra's pick). |
+| 63 | 2026-11-16T22:06:27+00:00 | Player | Look first, story later. |
+| 64 | 2026-11-16T22:06:27+00:00 | Player | A head on a body, not the plain square. |
+| 65 | 2026-11-16T22:06:27+00:00 | Player | Two eyes and a mouth. |
+| 66 | 2026-11-16T22:06:27+00:00 | Player | Floating feet (the style guide's way), with floating hands. |
 
 ---
 

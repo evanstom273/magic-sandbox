@@ -91,3 +91,72 @@ describe('the shapes', () => {
     expect(me.healed).toBeGreaterThan(0)
   })
 })
+
+describe('triggers', () => {
+  const me = () => body(20, 60, true)
+  const withTrig = (kind: 'impact' | 'delay' | 'near' | 'recast', shape: Spell['shape'] = 'projectile'): Spell =>
+    ({ elements: ['water'], shape, cast: 'instant', trigger: { kind, then: { elements: ['heat'], shape: 'aoe' } } })
+  const heatAt = (m: Magic) => m.flashes.filter((f) => f.colour === 0xff8a2a).length
+
+  test('on impact: a bolt sets off its follow-up where it hits', () => {
+    const m = new Magic(room())
+    const c = me(); m.bodies = [c]
+    m.cast(withTrig('impact'), once, { x: 24, y: 50 }, { x: 60, y: 62 }, c, { slot: 0 })
+    for (let t = 0; t < 2 && m.projectiles.length; t += DT) m.update(DT)
+    expect(m.projectiles).toHaveLength(0)
+    expect(heatAt(m)).toBeGreaterThan(0) // the heat AoE went off as the water bolt landed
+  })
+
+  test('after a delay: the follow-up goes off a second later, wherever the bolt has got to', () => {
+    const m = new Magic(room())
+    const c = me(); m.bodies = [c]
+    m.cast(withTrig('delay'), once, { x: 24, y: 20 }, { x: 140, y: 20 }, c, { slot: 0 })
+    run(m, 0.5)
+    expect(m.projectiles[0].trig).toBeDefined()
+    run(m, 0.6)
+    expect(m.projectiles[0]?.trig).toBeUndefined()
+  })
+
+  test('when something comes near: an AoE\'s follow-up waits until a body arrives', () => {
+    const m = new Magic(room())
+    const c = me(), dummy = body(140, 60)
+    m.bodies = [c, dummy]
+    m.cast(withTrig('near', 'aoe'), once, { x: 24, y: 50 }, { x: 90, y: 55 }, c, { slot: 0 })
+    run(m, 1)
+    expect(m.anchors).toHaveLength(1)
+    dummy.x = m.anchors[0].x
+    run(m, 0.1)
+    expect(m.anchors).toHaveLength(0)
+  })
+
+  test('on recast: the follow-up waits for the same slot to be cast again', () => {
+    const m = new Magic(room())
+    const c = me(); m.bodies = [c]
+    m.cast(withTrig('recast', 'aoe'), once, { x: 24, y: 50 }, { x: 90, y: 55 }, c, { slot: 2 })
+    run(m, 2)
+    expect(m.hasRecast(2)).toBe(true)
+    expect(m.hasRecast(1)).toBe(false)
+    m.recast(2)
+    expect(m.hasRecast(2)).toBe(false)
+    expect(m.anchors).toHaveLength(0)
+  })
+
+  test('a rune with "after a delay" goes off by itself a second after it\'s placed', () => {
+    const m = new Magic(room())
+    const c = me(); m.bodies = [c]
+    m.cast(withTrig('delay', 'rune'), once, { x: 24, y: 50 }, { x: 60, y: 70 }, c, { slot: 0 })
+    expect(m.runes).toHaveLength(1)
+    run(m, 1.2)
+    expect(m.runes).toHaveLength(0)
+  })
+
+  test('a held spell sets its trigger where it ends when it\'s let go', () => {
+    const m = new Magic(room())
+    const c = me(); m.bodies = [c]
+    const beam: Spell = { elements: ['heat'], shape: 'beam', cast: 'channeled', trigger: { kind: 'recast', then: { elements: ['water'], shape: 'aoe' } } }
+    for (let i = 0; i < 10; i++) m.cast(beam, { strength: 1, sustained: true, dt: DT }, { x: 26, y: 53 }, { x: 140, y: 53 }, c, { slot: 1 })
+    expect(m.anchors).toHaveLength(0)
+    m.channelEnded(beam, 1, { x: 26, y: 53 }, { x: 140, y: 53 }, c)
+    expect(m.hasRecast(1)).toBe(true)
+  })
+})

@@ -70,8 +70,13 @@ export function castCost(spell: Spell, strength = 1): number {
   let cost = els * shapeInfo(spell.shape).cost * scale
   if (spell.cast === 'burst') cost *= 0.6 // each of the three shots
   if (spell.cast === 'continuous') cost *= 0.5 // each shot
-  if (spell.trigger) cost += spell.trigger.then.elements.reduce((n, e) => n + elementInfo(e).cost, 0) * shapeInfo(spell.trigger.then.shape).cost
-  return cost
+  return cost + followUpCost(spell)
+}
+
+/** The follow-up's mana: part of each cast, or paid when a held spell is let go. */
+export function followUpCost(spell: Spell): number {
+  if (!spell.trigger) return 0
+  return spell.trigger.then.elements.reduce((n, e) => n + elementInfo(e).cost, 0) * shapeInfo(spell.trigger.then.shape).cost
 }
 
 /** Mana a second for channelled spells. */
@@ -87,6 +92,16 @@ export function toggleElement(spell: Spell, el: ElementId, capacity = STAND_IN_C
   }
   const elements = [...spell.elements, el]
   return { ...spell, elements: elements.length > capacity ? elements.slice(elements.length - capacity) : elements }
+}
+
+/** Sets or clears a trigger. A new trigger's follow-up starts as the same elements in an AoE. */
+export function withTrigger(spell: Spell, kind: TriggerKind | null): Spell {
+  if (!kind) { const rest = { ...spell }; delete rest.trigger; return rest }
+  return { ...spell, trigger: { kind, then: spell.trigger?.then ?? { elements: [...spell.elements], shape: 'aoe' } } }
+}
+
+export function withFollowUp(spell: Spell, then: FollowUp): Spell {
+  return spell.trigger ? { ...spell, trigger: { ...spell.trigger, then } } : spell
 }
 
 /** Changes the shape, keeping the casting type if the new shape allows it, otherwise its first type. */
@@ -108,6 +123,12 @@ export const SHAPE_HELP: Record<ShapeId, string> = {
   wave: 'A ring spreading out from you, acting on everything its edge crosses.',
   cone: 'A spray from the catalyst; substances land where the spray stops.',
   enchant: 'Enchants a weapon. There are no weapons yet.',
+}
+export const TRIGGER_HELP: Record<TriggerKind, string> = {
+  impact: 'When it hits something (for instant shapes, straight away where they land).',
+  delay: 'A second after casting, wherever the spell has got to.',
+  near: 'When something comes near: a creature, or you once you\'ve moved away.',
+  recast: 'When you cast this slot again (that press doesn\'t cast it anew).',
 }
 export const CAST_HELP: Record<CastType, string> = {
   instant: 'Casts once, the moment you press.',

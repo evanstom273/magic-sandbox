@@ -143,3 +143,26 @@ test('on desktop, clicking the hotbar or the Spells button doesn\'t cast', async
   await page.waitForTimeout(200)
   expect(await page.evaluate(() => (window as unknown as { __magic: () => { mana: number } }).__magic().mana)).toBe(100)
 })
+
+test('a trigger built in the builder: a water bolt that waits, then sets off heat on recast', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __anchors?: unknown }).__anchors === 'function')
+  await page.getByRole('button', { name: 'Spells' }).dispatchEvent('pointerdown')
+  const builder = page.getByRole('dialog', { name: 'Spell builder' })
+  await builder.getByRole('button', { name: 'Slot 1' }).click()
+  await builder.getByRole('button', { name: 'On recast' }).click()
+  await builder.getByRole('button', { name: 'Then Heat' }).click()
+  await builder.getByRole('button', { name: 'Then Water' }).click() // leave just Heat
+  await expect(builder).toContainText('on recast, then Heat AoE')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /Spell 1: Water Projectile → Heat AoE/ })).toBeVisible()
+
+  const anchors = () => page.evaluate(() => (window as unknown as { __anchors: () => number }).__anchors())
+  await page.mouse.move(700, 300)
+  await page.mouse.down(); await page.waitForTimeout(50); await page.mouse.up()
+  await expect.poll(anchors, { timeout: 3000 }).toBe(1) // landed, waiting
+  await page.waitForTimeout(400)
+  await page.mouse.down(); await page.waitForTimeout(50); await page.mouse.up()
+  await expect.poll(anchors).toBe(0) // set off
+  expect(await page.evaluate(() => (window as unknown as { __magic: () => { projectiles: number } }).__magic().projectiles)).toBe(0) // and no second bolt
+})

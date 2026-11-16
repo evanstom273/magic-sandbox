@@ -1,7 +1,7 @@
 import { applyDisc, applyToCell, push, SUBSTANCE, type ElementId } from '../world/elements.ts'
 import { CellGrid, Kind, KIND, Material as M } from '../world/grid.ts'
 import type { CastEvent } from './caster.ts'
-import { elementInfo, type Spell } from './spells.ts'
+import { elementInfo, type FollowUp, type Spell, type TriggerKind } from './spells.ts'
 
 // What spells do once cast: each shape delivers its elements into the world and onto creatures.
 // The world's own rules (simulate.ts) take it from there (#16, #19).
@@ -19,17 +19,33 @@ export interface Body {
   affect?(el: ElementId): void // other elements touching it (freezing, scorching, wetting)
 }
 
-export interface Projectile { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; age: number }
+/** A trigger waiting to set off its follow-up spell (#17, #32), riding on something or sitting at a point. */
+export interface Trig {
+  kind: TriggerKind
+  then: FollowUp
+  slot: number // the hotbar slot it came from, for recasting
+  dir: { x: number; y: number }
+  strength: number
+  caster: Body
+  age: number
+  armed: boolean // for "when something comes near": the caster only counts once it has moved away
+}
+export interface Anchor extends Trig { x: number; y: number }
+
+export interface Projectile { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; age: number; trig?: Trig }
 export interface Spark { x: number; y: number; vx: number; vy: number; life: number; max: number; colour: number }
 export interface Flash { x: number; y: number; r: number; life: number; max: number; colour: number }
 export interface Beam { x0: number; y0: number; x1: number; y1: number; colour: number }
-export interface Rune { x: number; y: number; els: ElementId[]; strength: number; armed: boolean; age: number }
-export interface Wisp { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; life: number; tick: number; home: { x: number; y: number } }
-export interface Mote { angle: number; els: ElementId[]; strength: number; life: number; x: number; y: number }
+export interface Rune { x: number; y: number; els: ElementId[]; strength: number; armed: boolean; age: number; trig?: Trig }
+export interface Wisp { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; life: number; tick: number; home: { x: number; y: number }; trig?: Trig }
+export interface Mote { angle: number; els: ElementId[]; strength: number; life: number; x: number; y: number; trig?: Trig }
 export interface Wave { x: number; y: number; r: number; max: number; els: ElementId[]; strength: number; hit: Set<Body> }
 
 const MAX_RUNES = 6
 const RUNE_REACH = 12
+export const TRIGGER_DELAY = 1 // seconds, for "after a delay"
+const NEAR_REACH = 12 // cells, for "when something comes near"
+const ANCHOR_WAIT = 20 // seconds a "near" or "recast" trigger waits before it gives up
 
 const rnd = Math.random
 const RANGE = 95 // the furthest an aimed spell (AoE, Target, Rune) lands from the caster
@@ -44,19 +60,27 @@ export class Magic {
   readonly wisps: Wisp[] = []
   readonly motes: Mote[] = []
   readonly waves: Wave[] = []
+  readonly anchors: Anchor[] = []
+  private beamEnds = new Map<number, { x: number; y: number; dir: { x: number; y: number } }>()
+  private beamSlot = -1
   bodies: Body[] = []
 
   constructor(grid: CellGrid) {
     this.grid = grid
   }
 
-  /** One cast of a spell, from the catalyst's tip towards the aim point. */
-  cast(spell: Spell, ev: CastEvent, tip: { x: number; y: number }, aim: { x: number; y: number }, caster: Body): void {
+  /**
+   * One cast of a spell, from the catalyst's tip towards the aim point. `slot` is the hotbar slot (for
+   * recasting); `origin` is set for a trigger's follow-up, which comes from where its trigger went off.
+   */
+  cast(spell: Spell, ev: CastEvent, tip: { x: number; y: number }, aim: { x: number; y: number }, caster: Body, opts: { slot?: number; origin?: { x: number; y: number } } = {}): void {
     const dx = aim.x - tip.x, dy = aim.y - tip.y
     const len = Math.hypot(dx, dy) || 1
     const dir = { x: dx / len, y: dy / len }
     const els = spell.elements
     const s = ev.strength
+    const origin = opts.origin
+    const counts = { p: this.projectiles.length, r: this.runes.length, w: this.wisps.length, m: this.motes.length }
     switch (spell.shape) {
       case 'projectile': {
         const spread = spell.cast === 'burst' || spell.cast === 'continuous' ? (rnd() - 0.5) * 0.12 : 0
@@ -67,23 +91,23 @@ export class Magic {
       }
       case 'cone': this.cone(els, tip, dir, s, ev); break
       case 'aoe': {
-        const p = this.clampToRange(caster, aim)
+        const p = origin ?? this.clampToRange(caster, aim)
         const r = 5 + 5 * s
         this.hit(els, p.x, p.y, r, 0.6 * s, false)
         this.flashes.push({ x: p.x, y: p.y, r, life: 0.3, max: 0.3, colour: elementInfo(els[0]).colour })
         break
       }
       case 'self': this.self(els, caster, dir, s, ev); break
-      case 'beam': this.beam(els, tip, dir, caster, ev.dt); break
+      case 'beam': this.beamSlot = opts.slot ?? -1; this.beam(els, tip, dir, caster, ev.dt); break
       case 'rune': {
-        const p = this.firstSurface(tip, aim)
+        const p = origin ? this.firstSurface(origin, { x: origin.x + dir.x * 30, y: origin.y + dir.y * 30 + 30 }) : this.firstSurface(tip, aim)
         this.runes.push({ x: p.x, y: p.y, els: [...els], strength: s, armed: false, age: 0 })
         if (this.runes.length > MAX_RUNES) this.runes.shift()
         break
       }
       case 'target': this.target(els, caster, aim, s, ev); break
       case 'summon': {
-        const p = this.clampToRange(caster, aim)
+        const p = origin ?? this.clampToRange(caster, aim)
         this.wisps.push({ x: p.x, y: p.y, vx: 0, vy: 0, els: [...els], strength: s, life: 6 + 4 * s, tick: 0.3, home: { x: p.x, y: p.y } })
         break
       }
@@ -93,11 +117,109 @@ export class Magic {
         break
       }
       case 'wave': {
-        const cy = caster.y - caster.h / 2
-        this.waves.push({ x: caster.x, y: cy, r: 4, max: ev.sustained ? 26 : 22 + 22 * s, els: [...els], strength: ev.sustained ? 0.8 : s, hit: new Set([caster]) })
+        const o = origin ?? { x: caster.x, y: caster.y - caster.h / 2 }
+        this.waves.push({ x: o.x, y: o.y, r: 4, max: ev.sustained ? 26 : 22 + 22 * s, els: [...els], strength: ev.sustained ? 0.8 : s, hit: new Set([caster]) })
         break
       }
       default: break
+    }
+
+    // A trigger rides on what the spell made (bolts, runes, wisps, motes), or waits where it landed.
+    // Held spells set theirs when they're let go (see channelEnded).
+    if (!spell.trigger || ev.sustained) return
+    const trig = (): Trig => ({ kind: spell.trigger!.kind, then: spell.trigger!.then, slot: opts.slot ?? -1, dir, strength: s, caster, age: 0, armed: false })
+    if (spell.shape === 'projectile') for (const p of this.projectiles.slice(counts.p)) p.trig = trig()
+    else if (spell.shape === 'rune') { const r = this.runes.at(-1); if (r && this.runes.length >= counts.r) r.trig = trig() }
+    else if (spell.shape === 'summon') for (const w of this.wisps.slice(counts.w)) w.trig = trig()
+    else if (spell.shape === 'orbit') for (const m of this.motes.slice(counts.m)) m.trig = trig()
+    else this.anchor(trig(), this.landing(spell, tip, dir, aim, caster, origin))
+  }
+
+  /** Where an instantaneous shape's effect was centred: where its trigger waits. */
+  private landing(spell: Spell, tip: { x: number; y: number }, dir: { x: number; y: number }, aim: { x: number; y: number }, caster: Body, origin?: { x: number; y: number }): { x: number; y: number } {
+    const centre = { x: caster.x, y: caster.y - caster.h / 2 }
+    switch (spell.shape) {
+      case 'aoe': return origin ?? this.clampToRange(caster, aim)
+      case 'target': return this.firstSurface(centre, this.clampToRange(caster, aim))
+      case 'self': return centre
+      case 'wave': return origin ?? centre
+      case 'cone': return this.firstSurface(tip, { x: tip.x + dir.x * 36, y: tip.y + dir.y * 36 })
+      case 'beam': return this.beamEnds.get(-1) ?? tip
+      default: return tip
+    }
+  }
+
+  private anchor(t: Trig, at: { x: number; y: number }): void {
+    if (t.kind === 'impact') this.fire(t, at.x, at.y)
+    else this.anchors.push({ ...t, x: at.x, y: at.y })
+  }
+
+  /** A held spell was let go: its trigger (if any) waits at where it ended. */
+  channelEnded(spell: Spell, slot: number, tip: { x: number; y: number }, aim: { x: number; y: number }, caster: Body): void {
+    if (!spell.trigger) return
+    const dx = aim.x - tip.x, dy = aim.y - tip.y, l = Math.hypot(dx, dy) || 1
+    const dir = { x: dx / l, y: dy / l }
+    const end = spell.shape === 'beam' ? this.beamEnds.get(slot) ?? this.beamEnds.get(-1) ?? tip : this.landing(spell, tip, dir, aim, caster)
+    this.anchor({ kind: spell.trigger.kind, then: spell.trigger.then, slot, dir, strength: 1, caster, age: 0, armed: false }, end)
+  }
+
+  /** Sets off a trigger's follow-up spell from a point. */
+  private fire(t: Trig, x: number, y: number): void {
+    const spell: Spell = { elements: t.then.elements, shape: t.then.shape, cast: 'instant' }
+    this.flashes.push({ x, y, r: 6, life: 0.2, max: 0.2, colour: 0xffffff })
+    this.cast(spell, { strength: Math.max(0.6, Math.min(1.2, t.strength)), sustained: false, dt: 0 }, { x, y }, { x: x + t.dir.x * 40, y: y + t.dir.y * 40 }, t.caster, { origin: { x, y } })
+  }
+
+  /** Is something (the caster only once it has moved away) within reach of a trigger at (x, y)? */
+  private somethingNear(t: Trig, x: number, y: number): boolean {
+    const d = (b: Body) => Math.hypot(b.x - x, b.y - b.h / 2 - y) - b.h / 2
+    if (!t.armed && d(t.caster) > NEAR_REACH + 2) t.armed = true
+    return this.bodies.some((b) => d(b) < NEAR_REACH && (!b.isCaster || t.armed))
+  }
+
+  /** Does this slot have triggers waiting for a recast? */
+  hasRecast(slot: number): boolean {
+    const waits = (t?: Trig) => !!t && t.kind === 'recast' && t.slot === slot
+    return this.anchors.some(waits) || this.projectiles.some((p) => waits(p.trig)) || this.runes.some((r) => waits(r.trig)) || this.wisps.some((w) => waits(w.trig)) || this.motes.some((m) => waits(m.trig))
+  }
+
+  /** Recasting a slot sets off everything of its waiting for a recast, instead of casting again. */
+  recast(slot: number): void {
+    const waits = (t?: Trig) => !!t && t.kind === 'recast' && t.slot === slot
+    for (let i = this.anchors.length - 1; i >= 0; i--) if (waits(this.anchors[i])) { const a = this.anchors.splice(i, 1)[0]; this.fire(a, a.x, a.y) }
+    for (const p of this.projectiles) if (waits(p.trig)) { this.fire(p.trig!, p.x, p.y); p.trig = undefined }
+    for (let i = this.runes.length - 1; i >= 0; i--) if (waits(this.runes[i].trig)) this.setOff(i)
+    for (const w of this.wisps) if (waits(w.trig)) { this.fire(w.trig!, w.x, w.y); w.trig = undefined }
+    for (let i = this.motes.length - 1; i >= 0; i--) if (waits(this.motes[i].trig)) { const m = this.motes.splice(i, 1)[0]; this.fire(m.trig!, m.x, m.y) }
+  }
+
+  /** Triggers riding on bolts, wisps and motes, and anchors waiting at points. */
+  private updateTriggers(dt: number): void {
+    for (const p of this.projectiles) {
+      const t = p.trig
+      if (!t) continue
+      t.age += dt
+      if ((t.kind === 'delay' && t.age >= TRIGGER_DELAY) || (t.kind === 'near' && this.somethingNear(t, p.x, p.y))) { this.fire(t, p.x, p.y); p.trig = undefined }
+    }
+    for (const w of this.wisps) {
+      const t = w.trig
+      if (!t) continue
+      t.age += dt
+      const touching = t.kind === 'impact' && !!this.bodyAt(w.x, w.y, 3)
+      if (touching || (t.kind === 'delay' && t.age >= TRIGGER_DELAY) || (t.kind === 'near' && this.somethingNear(t, w.x, w.y))) { this.fire(t, w.x, w.y); w.trig = undefined }
+    }
+    for (let i = this.motes.length - 1; i >= 0; i--) {
+      const m = this.motes[i], t = m.trig
+      if (!t) continue
+      t.age += dt
+      if ((t.kind === 'delay' && t.age >= TRIGGER_DELAY) || (t.kind === 'near' && this.somethingNear(t, m.x, m.y))) { this.motes.splice(i, 1); this.fire(t, m.x, m.y) }
+    }
+    for (let i = this.anchors.length - 1; i >= 0; i--) {
+      const a = this.anchors[i]
+      a.age += dt
+      const go = (a.kind === 'delay' && a.age >= TRIGGER_DELAY) || (a.kind === 'near' && this.somethingNear(a, a.x, a.y))
+      if (go) { this.anchors.splice(i, 1); this.fire(a, a.x, a.y) }
+      else if (a.age > ANCHOR_WAIT) this.anchors.splice(i, 1)
     }
   }
 
@@ -143,6 +265,7 @@ export class Magic {
     }
     if (hitBody) this.touchBody(hitBody, els, dir.x * 600 * dt, dir.y * 600 * dt, 14 * dt)
     this.beams.push({ x0: tip.x, y0: tip.y, x1: x, y1: y, colour: elementInfo(els[0]).colour })
+    this.beamEnds.set(this.beamSlot, { x, y, dir })
     if (Math.random() < 0.5) this.spark(x, y, els, 25)
     void caster
   }
@@ -265,6 +388,7 @@ export class Magic {
     this.updateWisps(dt)
     this.updateMotes(dt)
     this.updateWaves(dt)
+    this.updateTriggers(dt)
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i]
       p.age += dt
@@ -284,6 +408,8 @@ export class Magic {
         const r = 4 + 4 * Math.min(1.6, p.strength)
         this.hit(p.els, p.x, p.y, r, 0.75 * p.strength, false)
         this.flashes.push({ x: p.x, y: p.y, r, life: 0.22, max: 0.22, colour: elementInfo(p.els[0]).colour })
+        // Its trigger goes off here on impact; otherwise it keeps waiting where the bolt landed.
+        if (p.trig) this.anchor(p.trig, { x: p.x - p.vx * 0.01, y: p.y - p.vy * 0.01 })
       }
     }
     for (let i = this.sparks.length - 1; i >= 0; i--) {
@@ -308,6 +434,11 @@ export class Magic {
       const near = (b: Body) => Math.hypot(b.x - r.x, b.y - b.h / 2 - r.y) < RUNE_REACH + b.h / 2
       const caster = this.bodies.find((b) => b.isCaster)
       if (!r.armed && (!caster || !near(caster))) r.armed = true
+      // A rune's trigger decides when it goes off: by default (and "on impact" or "near"), when
+      // something comes near; "after a delay", a second after it's placed; "on recast", when recast.
+      const kind = r.trig?.kind
+      if (kind === 'recast') continue
+      if (kind === 'delay') { if (r.age >= TRIGGER_DELAY) this.setOff(i); continue }
       if (this.bodies.some((b) => near(b) && (!b.isCaster || r.armed))) this.setOff(i)
     }
   }
@@ -318,6 +449,7 @@ export class Magic {
     const radius = 5 + 5 * r.strength
     this.hit(r.els, r.x, r.y, radius, 0.7 * r.strength, false)
     this.flashes.push({ x: r.x, y: r.y, r: radius, life: 0.3, max: 0.3, colour: elementInfo(r.els[0]).colour })
+    if (r.trig) this.fire(r.trig, r.x, r.y - 2)
   }
 
   /** Summoned wisps (stand-ins): drift towards the nearest body that isn't the caster, giving off their elements. */
@@ -325,7 +457,11 @@ export class Magic {
     for (let i = this.wisps.length - 1; i >= 0; i--) {
       const w = this.wisps[i]
       w.life -= dt
-      if (w.life <= 0) { this.wisps.splice(i, 1); continue }
+      if (w.life <= 0) {
+        this.wisps.splice(i, 1)
+        if (w.trig && (w.trig.kind === 'near' || w.trig.kind === 'recast')) this.anchors.push({ ...w.trig, x: w.x, y: w.y })
+        continue
+      }
       let tx = w.home.x + Math.sin(w.life * 1.7) * 6, ty = w.home.y + Math.cos(w.life * 2.3) * 3
       const prey = this.bodies.filter((b) => !b.isCaster && Math.hypot(b.x - w.x, b.y - w.y) < 70).sort((a, b) => Math.hypot(a.x - w.x, a.y - w.y) - Math.hypot(b.x - w.x, b.y - w.y))[0]
       if (prey && !w.els.includes('life')) { tx = prey.x; ty = prey.y - prey.h - 3 }
@@ -357,6 +493,7 @@ export class Magic {
         if (prey) {
           this.hit(m.els, m.x, m.y, 3 + 2 * m.strength, 0.6 * m.strength, false)
           this.flashes.push({ x: m.x, y: m.y, r: 5, life: 0.2, max: 0.2, colour: elementInfo(m.els[0]).colour })
+          if (m.trig?.kind === 'impact') this.fire(m.trig, m.x, m.y)
         }
       }
     }

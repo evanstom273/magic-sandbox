@@ -6,7 +6,7 @@ import { Caster } from '../magic/caster.ts'
 import { Dummy } from '../magic/dummies.ts'
 import { Magic, type Body } from '../magic/effects.ts'
 import { DEFAULT_HOTBAR, describe } from '../magic/hotbar.ts'
-import { elementInfo, Mana, type Spell } from '../magic/spells.ts'
+import { elementInfo, followUpCost, Mana, type Spell } from '../magic/spells.ts'
 import { hud, spellEdits } from '../bridge.ts'
 import { touchInput } from '../input/touchInput.ts'
 import { BodyCell, type CellBody } from '../player/body.ts'
@@ -113,6 +113,7 @@ export class MainScene extends Phaser.Scene {
       w.__infiniteMana = (on: boolean) => { this.mana.infinite = on }
       w.__dummies = () => this.dummies.map((d) => ({ x: d.x, y: d.y, vx: d.vx, frozen: d.frozen, healed: d.healed, scorched: d.scorched }))
       w.__runes = () => this.magic.runes.length
+      w.__anchors = () => this.magic.anchors.length
       w.__Material = Material
       w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
@@ -304,9 +305,16 @@ export class MainScene extends Phaser.Scene {
     this.tapLatch = null
 
     const spell = this.hotbar[this.slot]
-    const casts = this.caster.update(spell, down, dt, this.mana)
     const tip = this.catalystTip()
-    for (const ev of casts) this.magic.cast(spell, ev, tip, this.aim, this.playerBody)
+    // Recasting a slot with triggers waiting "on recast" sets them off instead of casting again,
+    // and that press is used up until it's let go.
+    if (down && !this.castHeld && this.magic.hasRecast(this.slot)) { this.magic.recast(this.slot); this.recastHold = true }
+    this.castHeld = down
+    if (!down) this.recastHold = false
+    const wasChannelling = this.caster.channelling
+    const casts = this.caster.update(spell, down && !this.recastHold, dt, this.mana)
+    for (const ev of casts) this.magic.cast(spell, ev, tip, this.aim, this.playerBody, { slot: this.slot })
+    if (wasChannelling && !this.caster.channelling && this.mana.spend(followUpCost(spell))) this.magic.channelEnded(spell, this.slot, tip, this.aim, this.playerBody)
     if (this.caster.channelling && Math.random() < 0.5) {
       this.magic.sparks.push({ x: tip.x, y: tip.y, vx: (Math.random() - 0.5) * 20, vy: -10 - Math.random() * 15, life: 0.3, max: 0.3, colour: elementInfo(spell.elements[0]).colour })
     }
@@ -323,6 +331,8 @@ export class MainScene extends Phaser.Scene {
   private tapLatch: { x: number; y: number } | null = null
   private builderKey = false
   private wasOpen = false
+  private castHeld = false
+  private recastHold = false
   private selectHeld = false
 
   /**

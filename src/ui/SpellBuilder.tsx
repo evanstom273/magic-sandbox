@@ -2,8 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { hud, spellEdits } from '../game/bridge.ts'
 import { touchInput } from '../game/input/touchInput.ts'
 import {
-  CAST_HELP, CAST_TYPES, castCost, channelCost, ELEMENTS, SHAPE_HELP, SHAPES, STAND_IN_CAPACITY, TRIGGERS,
-  toggleElement, withShape, type Spell,
+  CAST_HELP, CAST_TYPES, castCost, channelCost, ELEMENTS, FOLLOW_UP_SHAPES, SHAPE_HELP, SHAPES, STAND_IN_CAPACITY, TRIGGER_HELP, TRIGGERS,
+  toggleElement, withFollowUp, withShape, withTrigger, type Spell,
 } from '../game/magic/spells.ts'
 
 const hex = (n: number) => '#' + n.toString(16).padStart(6, '0')
@@ -101,13 +101,38 @@ export function SpellBuilder() {
           ))}
         </Section>
 
-        <Section title="Trigger" note="Coming next: a trigger sets off a second spell from wherever this one got to.">
-          <Chip on disabled onClick={() => {}}>None</Chip>
-          {TRIGGERS.map((t) => <Chip key={t.id} on={false} disabled onClick={() => {}}>{t.name}</Chip>)}
+        <Section title="Trigger" note={spell.trigger ? TRIGGER_HELP[spell.trigger.kind] : 'Optional: sets off a second spell from wherever this one got to.'}>
+          <Chip on={!spell.trigger} onClick={() => set(withTrigger(spell, null))}>None</Chip>
+          {TRIGGERS.map((t) => <Chip key={t.id} on={spell.trigger?.kind === t.id} onClick={() => set(withTrigger(spell, t.id))}>{t.name}</Chip>)}
         </Section>
 
+        {spell.trigger && (
+          <div className="flex flex-col gap-3 rounded-lg border-2 border-dashed border-[#2c2f45] p-3">
+            <Section title="Then: elements" note={`Up to ${STAND_IN_CAPACITY}.`}>
+              {ELEMENTS.map((e) => (
+                <Chip key={e.id} label={`Then ${e.name}`} on={spell.trigger!.then.elements.includes(e.id)} onClick={() => {
+                  const then = spell.trigger!.then
+                  set(withFollowUp(spell, { ...then, elements: toggleElement({ ...spell, elements: then.elements }, e.id).elements }))
+                }}>
+                  <span className="h-2.5 w-2.5 rounded-[2px] border border-black/40" style={{ background: hex(e.colour) }} />
+                  {e.name}
+                </Chip>
+              ))}
+            </Section>
+            <Section title="Then: shape" note={SHAPE_HELP[spell.trigger.then.shape]}>
+              {FOLLOW_UP_SHAPES.map((id) => (
+                <Chip key={id} label={`Then ${SHAPES.find((s) => s.id === id)!.name}`} on={spell.trigger!.then.shape === id} onClick={() => set(withFollowUp(spell, { ...spell.trigger!.then, shape: id }))}>
+                  {SHAPES.find((s) => s.id === id)!.name}
+                </Chip>
+              ))}
+            </Section>
+          </div>
+        )}
+
         <p className="m-0 rounded-md border border-[#2c2f45] bg-[#14151f] px-3 py-2 text-[13px] text-white/75">
-          <strong className="text-white">{spell.elements.map((e) => ELEMENTS.find((x) => x.id === e)!.name).join(' + ')} {shape.name}</strong>, {spell.cast}. Costs {cost}.
+          <strong className="text-white">{spell.elements.map((e) => ELEMENTS.find((x) => x.id === e)!.name).join(' + ')} {shape.name}</strong>, {spell.cast}
+          {spell.trigger && <>, {TRIGGERS.find((t) => t.id === spell.trigger!.kind)!.name.toLowerCase()}, then <strong className="text-white">{spell.trigger.then.elements.map((e) => ELEMENTS.find((x) => x.id === e)!.name).join(' + ')} {SHAPES.find((s) => s.id === spell.trigger!.then.shape)!.name}</strong></>}
+          . Costs {cost}{spell.trigger && spell.cast === 'channeled' ? ', plus the follow-up when it goes off' : ''}.
         </p>
       </div>
     </div>

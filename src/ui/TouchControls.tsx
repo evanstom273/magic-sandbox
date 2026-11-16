@@ -42,8 +42,9 @@ function HoldButton({ k, label, children }: { k: 'jump'; label: string; children
 
 const RADIUS = 52
 
-// A fixed thumbstick: drag from its centre to move.
-function Thumbstick() {
+// A fixed thumbstick: drag from its centre to move. With `aim`, it's the aim stick (#81): drag to
+// aim, hold to charge or channel, release to cast.
+function Thumbstick({ aim }: { aim?: boolean }) {
   const [knob, setKnob] = useState({ x: 0, y: 0 })
   const centre = useRef({ x: 0, y: 0 })
   const active = useRef<number | null>(null)
@@ -54,20 +55,25 @@ function Thumbstick() {
     if (d > RADIUS) { dx = (dx / d) * RADIUS; dy = (dy / d) * RADIUS }
     setKnob({ x: dx, y: dy })
     const nx = dx / RADIUS
-    touchInput.moveX = Math.abs(nx) > 0.3 ? nx : 0
+    if (aim) {
+      touchInput.aimX = nx
+      touchInput.aimY = dy / RADIUS
+      touchInput.aiming = true
+    } else touchInput.moveX = Math.abs(nx) > 0.3 ? nx : 0
   }
   const end = () => {
     active.current = null
     setKnob({ x: 0, y: 0 })
-    touchInput.moveX = 0
+    if (aim) touchInput.aiming = false
+    else touchInput.moveX = 0
   }
 
   return (
     <div
       role="slider"
-      aria-label="Move"
+      aria-label={aim ? 'Aim and cast' : 'Move'}
       aria-valuenow={Math.round((knob.x / RADIUS) * 100)}
-      className="pointer-events-auto relative h-36 w-36 touch-none select-none rounded-full border border-white/15 bg-white/5"
+      className={`pointer-events-auto relative h-36 w-36 touch-none select-none rounded-full border ${aim ? 'border-[#8fd3ff]/40 bg-[#8fd3ff]/5' : 'border-white/15 bg-white/5'}`}
       onPointerDown={(e) => {
         e.preventDefault()
         const r = e.currentTarget.getBoundingClientRect()
@@ -91,7 +97,8 @@ function Thumbstick() {
   )
 }
 
-// On-screen controls for phones and tablets: the thumbstick bottom left, Jump bottom right.
+// On-screen controls for phones and tablets: the move stick bottom left; the aim stick bottom right,
+// with Jump beside it.
 export function TouchControls() {
   const [show] = useState(() => {
     const t = wantsTouch()
@@ -102,7 +109,10 @@ export function TouchControls() {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-[max(16px,env(safe-area-inset-left))] pb-[max(16px,env(safe-area-inset-bottom))]">
       <Thumbstick />
-      <HoldButton k="jump" label="Jump">Jump</HoldButton>
+      <div className="flex items-end gap-3">
+        <HoldButton k="jump" label="Jump">Jump</HoldButton>
+        <Thumbstick aim />
+      </div>
     </div>
   )
 }

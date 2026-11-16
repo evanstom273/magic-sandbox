@@ -18,6 +18,7 @@ export interface PlayerState {
   lockDir: -1 | 1
   clingPush: number // how long the player has been pushing into a wall while falling
   fallDist: number // cells fallen since last on the ground or a wall; going up doesn't subtract
+  boost: number // seconds left of a magic launch, during which letting go of jump doesn't cut the rise
 }
 
 export interface PlayerInput {
@@ -39,7 +40,7 @@ export interface StepEvents {
 export function createPlayer(x: number, y: number): PlayerState {
   return {
     x, y, vx: 0, vy: 0, grounded: false, coyote: 0, buffer: 0, jumpHeld: false, facing: 1,
-    airJumps: PLAYER.airJumps, onWall: 0, wallLock: 0, lockDir: 1, clingPush: 0, fallDist: 0,
+    airJumps: PLAYER.airJumps, onWall: 0, wallLock: 0, lockDir: 1, clingPush: 0, fallDist: 0, boost: 0,
   }
 }
 
@@ -155,7 +156,8 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     }
   }
 
-  if (!input.jump && s.vy < -T.jumpSpeed * T.jumpCut) s.vy = -T.jumpSpeed * T.jumpCut
+  s.boost = Math.max(0, s.boost - dt)
+  if (!input.jump && s.boost <= 0 && s.vy < -T.jumpSpeed * T.jumpCut) s.vy = -T.jumpSpeed * T.jumpCut
   s.vy = Math.min(swimming ? T.swimSink : T.maxFall, s.vy + T.gravity * (swimming ? 0.25 : 1) * dt)
   if (swimming) { s.fallDist = 0; s.airJumps = T.airJumps } // water breaks a fall
 

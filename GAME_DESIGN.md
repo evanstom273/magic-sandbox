@@ -18,14 +18,14 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:06:27+00:00):**
+**Where the project stands (as of 2026-11-16T22:07:44+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): a Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`.
 - Magic Sandbox Artifact made; Fine cells chosen from it (History #34). Characters are voxels too (History #35).
 - **The player is in the game, as a blank square** (History #36–#40): a 12-cell body of real cells in a test room, with walking, jumping, squash and stretch and dust, playable with keyboard, gamepad and touch. Since then: a double jump and Celeste-style wall climbing and wall jumps (History #41–#46), now with auto grab (History #47), made less sticky after Lyra's first playtest (History #48), and only holding on while pushing towards the wall (History #49). No climbing now: walls are held, slid down and kicked off, and scaled by wall-jumping and steering back (History #50). **Health and fall damage built** (History #51–#61): a health bar, falls that dent the body, a stand-in rest spot to heal, and a death that shatters the body and waits for Jump before the player gathers back at the start (History #62). Waiting on Lyra's playtest.
-- **Designing the player's look** (History #63–#66): a head on a body, two eyes and a mouth, floating hands and floating feet; the Caster Line-up shows six builds to choose from.
+- **Designing the player's look** (History #63–#66): a head on a body, two eyes and a mouth, floating hands and floating feet; Lyra picked No. 6 from the Caster Line-up (History #67).
 - Top-level design from Lyra (History #7–#13).
 - Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24); round 4 drawing elements in, shapes and triggers from the start, what catalysts do, and holding one at a time (History #25–#28). Shapes and casting types come from Lyra's Magic Mod (History #29, #30); round 5 settled how casting types fit, the starting triggers, and that weapons exist (History #31–#33).
 
@@ -175,6 +175,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **A head on a body,** not the plain square: more of a figure, less of a block. Chosen over keeping the square (Claude's recommendation), a rounded square and a taller rectangle. *(2026-11-16T22:06:27+00:00 — History #64)*
 - **Two eyes and a mouth.** Chosen over two eyes alone (Claude's recommendation), one eye, and eyes in shadow. *(2026-11-16T22:06:27+00:00 — History #65)*
 - **Floating feet,** the style guide's way: dark feet that float under and partly behind the body and move on their own. Chosen over stubby legs and longer legs. *(2026-11-16T22:06:27+00:00 — History #66)*
+- **Build: No. 6, "Taller"** from the Caster Line-up: a rounded head (10 cells wide, 7 tall) with big eyes and a two-cell mouth, on a longer body (8 wide, 6 tall), with floating hands and feet; about 16 cells from the top of the head to the bottom of the feet. Lyra's pick. The hitbox and movement need retuning for it. *(2026-11-16T22:07:44+00:00 — History #67)*
 - **The floating hands** are Lyra's, from the start of this round. *(2026-11-16T22:06:27+00:00)*
 
 ### Player movement
@@ -410,6 +411,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 64 | 2026-11-16T22:06:27+00:00 | Player | A head on a body, not the plain square. |
 | 65 | 2026-11-16T22:06:27+00:00 | Player | Two eyes and a mouth. |
 | 66 | 2026-11-16T22:06:27+00:00 | Player | Floating feet (the style guide's way), with floating hands. |
+| 67 | 2026-11-16T22:07:44+00:00 | Player | Build: No. 6 "Taller" from the Caster Line-up (round head on a longer body, about 16 cells tall with feet). |
 
 ---
 

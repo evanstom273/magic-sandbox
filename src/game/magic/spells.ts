@@ -3,13 +3,65 @@ import type { ElementId } from '../world/elements.ts'
 // The spell model (#17, #29–#32, #80): a spell is elements + a shape + a casting type, with an
 // optional trigger that sets off a follow-up spell (its own elements and shape).
 
-export const ELEMENTS: { id: ElementId; name: string; colour: number; cost: number }[] = [
-  { id: 'water', name: 'Water', colour: 0x3a86ee, cost: 4 },
-  { id: 'sand', name: 'Sand', colour: 0xe0bf6e, cost: 4 },
-  { id: 'heat', name: 'Heat', colour: 0xff8a2a, cost: 5 },
-  { id: 'cold', name: 'Cold', colour: 0xbfeaff, cost: 5 },
-  { id: 'force', name: 'Force', colour: 0xd6d6e6, cost: 5 },
-  { id: 'life', name: 'Life', colour: 0x4fdc6a, cost: 7 },
+/** The codex's groups: forces, liquids, gases, solids and powders, and things made by reactions. */
+export type ElementKind = 'force' | 'liquid' | 'gas' | 'solid' | 'made'
+export interface ElementInfo { id: ElementId; name: string; kind: ElementKind; colour: number; cost: number }
+
+// Every castable element so far (#79 the first six; the rest from the codex). Fire isn't castable
+// (the codex: Heat on anything flammable makes it). Costs are Claude's, to tune: common stuff is
+// cheap, dangerous or rare stuff dear (obsidian, plasma, thermite, gold, and liquid mana, which
+// gives back less than it costs).
+const el = (id: ElementId, name: string, kind: ElementKind, colour: number, cost: number): ElementInfo => ({ id, name, kind, colour, cost })
+export const ELEMENTS: ElementInfo[] = [
+  el('life', 'Life', 'force', 0x4fdc6a, 7),
+  el('heat', 'Heat', 'force', 0xff8a2a, 5),
+  el('cold', 'Cold', 'force', 0xbfeaff, 5),
+  el('force', 'Force', 'force', 0xd6d6e6, 5),
+  el('water', 'Water', 'liquid', 0x3a86ee, 4),
+  el('oil', 'Oil', 'liquid', 0x5a4428, 4),
+  el('lava', 'Lava', 'liquid', 0xff6a1e, 7),
+  el('acid', 'Acid', 'liquid', 0xc8ff3a, 6),
+  el('slime', 'Slime', 'liquid', 0x5fd8b0, 5),
+  el('mercury', 'Mercury', 'liquid', 0xd8dce8, 6),
+  el('blood', 'Blood', 'liquid', 0x8a1f2a, 4),
+  el('honey', 'Honey (sap)', 'liquid', 0xe8a23a, 5),
+  el('tar', 'Tar', 'liquid', 0x221d1d, 5),
+  el('spirits', 'Spirits', 'liquid', 0xe6e0ff, 4),
+  el('mana', 'Liquid mana', 'liquid', 0x57c8ff, 12),
+  el('swampgas', 'Swamp gas', 'gas', 0x8aa07a, 5),
+  el('mist', 'Mist', 'gas', 0xb8c0cc, 3),
+  el('sand', 'Sand', 'solid', 0xe0bf6e, 4),
+  el('stone', 'Stone', 'solid', 0x7a7486, 5),
+  el('gunpowder', 'Gunpowder', 'solid', 0x4a4652, 6),
+  el('metal', 'Metal', 'solid', 0x9aa4b0, 6),
+  el('dirt', 'Dirt', 'solid', 0x6e4a2e, 4),
+  el('clay', 'Clay', 'solid', 0xb0705a, 4),
+  el('salt', 'Salt', 'solid', 0xe8e4dc, 4),
+  el('snow', 'Snow', 'solid', 0xe2ecfa, 4),
+  el('coal', 'Coal', 'solid', 0x2a2a30, 5),
+  el('crystal', 'Crystal', 'solid', 0x9fe8f0, 7),
+  el('gold', 'Gold', 'solid', 0xffcf4a, 8),
+  el('bone', 'Bone', 'solid', 0xe6dcc4, 4),
+  el('fungus', 'Fungus', 'solid', 0xc87ad8, 5),
+  el('seeds', 'Seeds', 'solid', 0xa08a4a, 4),
+  el('thermite', 'Thermite', 'solid', 0x8a3a3a, 8),
+  el('quicksand', 'Quicksand', 'solid', 0xd0a860, 5),
+  el('steam', 'Steam', 'made', 0xc8d0dc, 4),
+  el('smoke', 'Smoke', 'made', 0x4a4a56, 3),
+  el('ice', 'Ice', 'made', 0xa8dcf0, 5),
+  el('obsidian', 'Obsidian', 'made', 0x2e2040, 9),
+  el('glass', 'Glass', 'made', 0xcfe8ef, 5),
+  el('rubble', 'Rubble', 'made', 0x6a6474, 4),
+  el('molten', 'Molten metal', 'made', 0xffd27a, 7),
+  el('plants', 'Plants and wood', 'made', 0x4fae4a, 5),
+  el('rot', 'Rot and miasma', 'made', 0x7a8a3a, 5),
+  el('mud', 'Mud', 'made', 0x6a4e36, 4),
+  el('spores', 'Spores', 'made', 0xc8b88a, 5),
+  el('plasma', 'Plasma', 'made', 0xff9aff, 9),
+  el('brick', 'Brick', 'made', 0xa0523a, 6),
+  el('ash', 'Ash', 'made', 0x8a8a90, 3),
+  el('ectoplasm', 'Ectoplasm', 'made', 0x9affd8, 6),
+  el('amber', 'Amber', 'made', 0xe0901a, 7),
 ]
 export const elementInfo = (id: ElementId) => ELEMENTS.find((e) => e.id === id)!
 

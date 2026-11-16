@@ -1,5 +1,5 @@
 import { boxHits, type SolidAt } from '../player/movement.ts'
-import type { ElementId } from '../world/elements.ts'
+import { feel, type ElementId } from '../world/elements.ts'
 import type { Body } from './effects.ts'
 
 // Stand-in training dummies (not creature designs): something for Target, Orbit, Summon and runes to
@@ -29,9 +29,10 @@ export class Dummy implements Body {
   impulse(vx: number, vy: number): void { if (this.frozen <= 0) { this.vx += vx; this.vy += vy } }
   thrust(ax: number, ay: number, dt: number): void { this.impulse(ax * dt, ay * dt) }
   affect(el: ElementId): void {
-    if (el === 'cold') { this.frozen = 2.5; this.vx = 0 }
-    else if (el === 'heat') { this.scorched = 1; this.frozen = 0 }
-    else if (el === 'water') this.wet = 3
+    const f = feel(el)
+    if (f === 'cold') { this.frozen = 2.5; this.vx = 0 }
+    else if (f === 'hot') { this.scorched = 1; this.frozen = 0 }
+    else if (f === 'wet') this.wet = 3
   }
 
   update(dt: number, solid: SolidAt): void {

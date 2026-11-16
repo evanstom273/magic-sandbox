@@ -92,3 +92,27 @@ test('at zero health the body shatters, the game waits for Jump, then the player
   expect(back.health).toBe(100)
   expect(back.x).toBeCloseTo(30, 0)
 })
+
+test('standing in liquid mana soaks the pool up into your mana; lava eats the body away', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __health?: unknown }).__health === 'function')
+  type W = { __world: () => { get(x: number, y: number): number; set(x: number, y: number, m: number): void; cells: Uint8Array }; __Material: Record<string, number>; __player: () => { x: number; y: number }; __setMana(n: number): void; __health: () => { value: number; marks: string[] } }
+  const pool = () => page.evaluate(() => { const w = window as unknown as W; return w.__world().cells.filter((c) => c === w.__Material.MANA).length })
+  await page.evaluate(() => {
+    const w = window as unknown as W, g = w.__world(), M = w.__Material, p = w.__player()
+    for (let y = Math.floor(p.y) - 14; y < Math.floor(p.y); y++) {
+      for (let x = Math.floor(p.x) - 15; x < Math.floor(p.x) + 15; x++) if (g.get(x, y) === M.EMPTY || g.get(x, y) === M.PLANT) g.set(x, y, M.MANA)
+    }
+    w.__setMana(5)
+  })
+  const before = await pool()
+  expect(before).toBeGreaterThan(200)
+  await expect.poll(pool, { timeout: 3000 }).toBeLessThan(before - 40) // soaked up
+
+  await page.evaluate(() => {
+    const w = window as unknown as W, g = w.__world(), M = w.__Material, p = w.__player()
+    for (let y = Math.floor(p.y) - 3; y < Math.floor(p.y); y++) for (let x = Math.floor(p.x) - 7; x < Math.floor(p.x) + 7; x++) g.set(x, y, M.LAVA)
+  })
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__health().marks), { timeout: 3000 }).toContain('burn')
+  expect(await page.evaluate(() => (window as unknown as W).__health().value)).toBeLessThan(100)
+})

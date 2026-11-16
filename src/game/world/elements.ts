@@ -1,15 +1,49 @@
-import { CellGrid, Kind, KIND, Material as M } from './grid.ts'
-import { FUEL, lifeFor, lifeSteps } from './simulate.ts'
+import { CellGrid, HEAT, Kind, KIND, Material as M } from './grid.ts'
+import { BURNS, EXPLODES, explode, FREEZES, GOLD, ignite, lifeFor, lifeSteps, lightThermite, melt, MELTS } from './reactions.ts'
 
-// How the six test elements act on the world's cells (Element Codex). Substances make material;
-// forces change what's there. Creatures are handled by the magic itself.
+// How elements act on the world's cells (Element Codex). Substances make material; forces change
+// what's there. Creatures are handled by the magic itself.
 
-export const ElementId = { WATER: 'water', SAND: 'sand', HEAT: 'heat', COLD: 'cold', FORCE: 'force', LIFE: 'life' } as const
-export type ElementId = (typeof ElementId)[keyof typeof ElementId]
+export type ElementId =
+  // Forces built so far (the rest come with stage 3)
+  | 'life' | 'heat' | 'cold' | 'force'
+  // Liquids
+  | 'water' | 'oil' | 'lava' | 'acid' | 'slime' | 'mercury' | 'blood' | 'honey' | 'tar' | 'spirits' | 'mana'
+  // Gases
+  | 'swampgas' | 'mist'
+  // Solids and powders
+  | 'sand' | 'stone' | 'gunpowder' | 'metal' | 'dirt' | 'clay' | 'salt' | 'snow' | 'coal' | 'crystal' | 'gold'
+  | 'bone' | 'fungus' | 'seeds' | 'thermite' | 'quicksand'
+  // Made by reactions (castable once drawn in; drawing in isn't built, so they're open for now)
+  | 'steam' | 'smoke' | 'ice' | 'obsidian' | 'glass' | 'rubble' | 'molten' | 'plants' | 'rot' | 'mud'
+  | 'spores' | 'plasma' | 'brick' | 'ash' | 'ectoplasm' | 'amber'
 
-export const SUBSTANCE: Partial<Record<ElementId, M>> = { water: M.WATER, sand: M.SAND }
+/** The material each substance makes. Fire isn't here: the codex says it can't be cast. */
+export const SUBSTANCE: Partial<Record<ElementId, M>> = {
+  water: M.WATER, oil: M.OIL, lava: M.LAVA, acid: M.ACID, slime: M.SLIME, mercury: M.MERCURY, blood: M.BLOOD,
+  honey: M.HONEY, tar: M.TAR, spirits: M.SPIRITS, mana: M.MANA,
+  swampgas: M.SWAMP_GAS, mist: M.MIST,
+  sand: M.SAND, stone: M.STONE, gunpowder: M.GUNPOWDER, metal: M.METAL, dirt: M.DIRT, clay: M.CLAY, salt: M.SALT,
+  snow: M.SNOW, coal: M.COAL, crystal: M.CRYSTAL, gold: M.GOLD, bone: M.BONE, fungus: M.FUNGUS, seeds: M.SEEDS,
+  thermite: M.THERMITE, quicksand: M.QUICKSAND,
+  steam: M.STEAM, smoke: M.SMOKE, ice: M.ICE, obsidian: M.OBSIDIAN, glass: M.GLASS, rubble: M.RUBBLE,
+  molten: M.MOLTEN, plants: M.WOOD, rot: M.MIASMA, mud: M.MUD, spores: M.SPORES, plasma: M.PLASMA,
+  brick: M.BRICK, ash: M.ASH, ectoplasm: M.ECTOPLASM, amber: M.AMBER,
+}
 
 const rnd = Math.random
+
+/** How an element feels to a creature it touches, for the stand-in dummies: burning, freezing or wetting. */
+export function feel(el: ElementId): 'hot' | 'cold' | 'wet' | undefined {
+  if (el === 'heat') return 'hot'
+  if (el === 'cold') return 'cold'
+  const s = SUBSTANCE[el]
+  if (s === undefined) return undefined
+  if (HEAT[s] > 0) return 'hot'
+  if (s === M.ICE || s === M.SNOW) return 'cold'
+  if (KIND[s] === Kind.LIQUID) return 'wet'
+  return undefined
+}
 
 /** Puts a substance into a cell if there's room (empty, gas or fire). */
 export function place(g: CellGrid, x: number, y: number, m: M): boolean {
@@ -22,31 +56,46 @@ export function place(g: CellGrid, x: number, y: number, m: M): boolean {
   return false
 }
 
-/** Heat on one cell. `sustained` is a held spell (beam, channelled cone), which can turn sand to glass. */
+/**
+ * Heat on one cell. `sustained` is a held spell (beam, channelled cone): hotter, enough to turn
+ * sand to glass, metal to molten metal and stone to lava, and to light thermite.
+ */
 export function heat(g: CellGrid, x: number, y: number, sustained = false): void {
-  const m = g.get(x, y)
   if (!g.inside(x, y)) return
-  if (m === M.WATER) { if (rnd() < 0.7) g.set(x, y, M.STEAM, lifeFor(M.STEAM)) }
-  else if (m === M.ICE) g.set(x, y, M.WATER)
-  else if (m === M.WOOD) g.set(x, y, M.FIRE, FUEL | lifeSteps(0.9 + rnd() * 1.2))
-  else if (m === M.PLANT) g.set(x, y, M.FIRE, FUEL | lifeSteps(0.4 + rnd() * 0.4))
-  else if (m === M.EMPTY && rnd() < 0.3) g.set(x, y, M.FIRE, lifeSteps(0.15 + rnd() * 0.25))
-  else if (m === M.SAND && sustained && rnd() < 0.04) g.set(x, y, M.GLASS)
+  const m = g.get(x, y), p = y * g.width + x, level = sustained ? 3 : 1.5
+  if (m === M.WATER) { if (rnd() < 0.7) g.set(x, y, M.STEAM, lifeFor(M.STEAM)); return }
+  if (m === M.SALT_WATER) {
+    // Boils off, leaving the salt behind.
+    if (rnd() < 0.7) { if (rnd() < 0.3) g.set(x, y, M.SALT); else g.set(x, y, M.STEAM, lifeFor(M.STEAM)) }
+    return
+  }
+  if (m === M.EMPTY) { if (rnd() < 0.3) g.set(x, y, M.FIRE, lifeSteps(0.15 + rnd() * 0.25)); return }
+  const ex = EXPLODES[m]
+  if (ex) { explode(g, x, y, ex.r); return }
+  if (m === M.THERMITE) { if (sustained && rnd() < 0.1) lightThermite(g, x, y); return }
+  if (BURNS[m]) { ignite(g, x, y, m); return }
+  if (m === M.MOLTEN) { g.life[p] = (g.life[p] & GOLD) | lifeFor(M.MOLTEN); return } // kept molten
+  const mt = MELTS[m]
+  if (mt && level >= mt.level && rnd() < mt.cast) melt(g, x, y, m, mt.into)
 }
 
+/** Cold on one cell: freezes water, sets lava to obsidian and molten metal back to metal, puts fire out. */
 export function cold(g: CellGrid, x: number, y: number): void {
-  const m = g.get(x, y)
   if (!g.inside(x, y)) return
-  if (m === M.WATER) g.set(x, y, M.ICE)
-  else if (m === M.STEAM) g.set(x, y, M.WATER)
-  else if (m === M.FIRE) g.set(x, y, M.EMPTY)
+  const m = g.get(x, y)
+  if (m === M.MOLTEN) { g.set(x, y, g.life[y * g.width + x] & GOLD ? M.GOLD : M.METAL); return }
+  const into = FREEZES[m]
+  if (into !== undefined) g.set(x, y, into, lifeFor(into))
 }
 
-/** Life on one cell: plants grow on surfaces and spread. */
+/** Life on one cell: plants grow on surfaces and spread; rot heals back to wood, miasma clears, seeds sprout. */
 export function life(g: CellGrid, x: number, y: number): void {
   const m = g.get(x, y)
   if (!g.inside(x, y)) return
-  if (m === M.PLANT) {
+  if (m === M.ROT) g.set(x, y, M.WOOD)
+  else if (m === M.MIASMA) g.set(x, y, M.EMPTY)
+  else if (m === M.SEEDS) g.set(x, y, M.PLANT)
+  else if (m === M.PLANT) {
     const dirs = [[1, 0], [-1, 0], [0, -1], [0, 1]]
     const [dx, dy] = dirs[(rnd() * 4) | 0]
     if (g.get(x + dx, y + dy) === M.EMPTY && supported(g, x + dx, y + dy)) g.set(x + dx, y + dy, M.PLANT)
@@ -62,9 +111,19 @@ function supported(g: CellGrid, x: number, y: number): boolean {
   return false
 }
 
+/** What a strong enough push breaks: the strength it takes, and what it leaves. */
+const BREAKS: Partial<Record<number, { at: number; into: number; chance: (s: number) => number }>> = {
+  [M.STONE]: { at: 0.7, into: M.RUBBLE, chance: (s) => (s - 0.6) * 0.8 },
+  [M.GLASS]: { at: 0.5, into: M.SAND, chance: (s) => s * 0.6 },
+  [M.ICE]: { at: 0.5, into: M.SNOW, chance: (s) => s * 0.6 }, // shatters
+  [M.BONE]: { at: 0.5, into: M.EMPTY, chance: (s) => s * 0.4 }, // brittle
+  [M.BRICK]: { at: 0.95, into: M.RUBBLE, chance: (s) => (s - 0.9) * 0.8 }, // only strong Force
+}
+
 /**
  * Force over a disc: pushes loose cells (powders, liquids, gases, fire) away from (ox, oy), or along
- * (dx, dy) if given. Strong enough (strength 0–1), it breaks stone to rubble and shatters glass to sand.
+ * (dx, dy) if given. Strong enough (strength 0–1), it breaks stone to rubble, shatters glass to sand
+ * and ice to snow, crushes bone and, very strong, breaks brick. Metal is too heavy to move.
  */
 export function push(g: CellGrid, cx: number, cy: number, r: number, strength: number, ox = cx, oy = cy, dx = 0, dy = 0): void {
   const cells: { x: number; y: number; d: number }[] = []
@@ -79,9 +138,10 @@ export function push(g: CellGrid, cx: number, cy: number, r: number, strength: n
   const reach = Math.max(1, Math.round(strength * 4))
   for (const { x, y } of cells) {
     const m = g.get(x, y), k = KIND[m]
-    if (m === M.STONE && strength >= 0.7 && rnd() < (strength - 0.6) * 0.8) { g.set(x, y, M.RUBBLE); continue }
-    if (m === M.GLASS && strength >= 0.5 && rnd() < strength * 0.6) { g.set(x, y, M.SAND); continue }
+    const br = BREAKS[m]
+    if (br && strength >= br.at) { if (rnd() < br.chance(strength)) g.set(x, y, br.into); if (k !== Kind.POWDER) continue }
     if (!(k === Kind.POWDER || k === Kind.LIQUID || k === Kind.GAS || k === Kind.FIRE)) continue
+    if (g.get(x, y) === M.EMPTY) continue
     let vx = dx, vy = dy
     if (vx === 0 && vy === 0) { vx = x - ox; vy = y - oy; const l = Math.hypot(vx, vy) || 1; vx /= l; vy /= l }
     let px = x, py = y

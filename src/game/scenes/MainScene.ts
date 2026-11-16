@@ -12,16 +12,35 @@ import { touchInput } from '../input/touchInput.ts'
 import { BodyCell, type CellBody } from '../player/body.ts'
 import { feet, FIG, figureBody, HAND_CELLS, hands, type Face, type Pose } from '../player/figure.ts'
 import { fallDamage, Health, HEALTH } from '../player/health.ts'
-import { createPlayer, stepPlayer, type PlayerState } from '../player/movement.ts'
+import { createPlayer, stepPlayer, type PlayerState, type Surroundings } from '../player/movement.ts'
 import { Squash } from '../player/squash.ts'
 import { PLAYER, SQUASH } from '../player/tuning.ts'
 import { DAMAGE, DUST, FOOT, HERO, INK } from '../style/tokens.ts'
-import { Material, type CellGrid } from '../world/grid.ts'
+import { Kind, KIND, Material, MATERIALS, type CellGrid } from '../world/grid.ts'
 import { step as simulate, STEPS_PER_SECOND } from '../world/simulate.ts'
 import { buildTestRoom, REST_SPOT, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
 import { paintGrid } from '../world/worldTexture.ts'
 
 const FOOT_CELL = 3
+
+/** Damage a second from touching these (Element Codex: burned, eaten, scalded, poisoned). Claude's numbers, to tune. */
+const HURTS: Partial<Record<number, number>> = {
+  [Material.LAVA]: 45, [Material.MOLTEN]: 45, [Material.PLASMA]: 60, [Material.BURNING_THERMITE]: 60,
+  [Material.FIRE]: 12, [Material.ACID]: 20, [Material.STEAM]: 4, [Material.MIASMA]: 4, [Material.MERCURY]: 3,
+}
+/** Landing on these halves a fall's damage (snow and slime take all of it). Moss counts. */
+const SOFT = new Set<number>([Material.SAND, Material.RUBBLE, Material.ASH, Material.DIRT, Material.MUD, Material.PLANT, Material.FUNGUS, Material.SEEDS])
+/**
+ * Liquid mana: standing in it refills mana, using the pool up as it does. Each cell gives about
+ * what it cost to cast, so casting mana can't make mana from nothing. Claude's numbers, to tune.
+ */
+const MANA_POOL = { rate: 25, perCell: 0.1 }
+
+interface Feel extends Surroundings {
+  hurt: number // the worst damage a second from what's touching the body
+  hurtAt: number // 0–1 across the body, where it's touching
+  mana: number[] // liquid mana cells touching the body
+}
 const BODY_COLOURS: Record<number, number> = { [BodyCell.INK]: INK, [BodyCell.HERO]: HERO, [FOOT_CELL]: FOOT }
 
 export class MainScene extends Phaser.Scene {
@@ -48,6 +67,9 @@ export class MainScene extends Phaser.Scene {
   private health = new Health()
   private bodyKey = ''
   private hurtFlash = 0
+  private burnAcc = 0 // burn damage building up, taken in bites
+  private manaDrain = 0 // liquid mana soaked up, in cells, still to remove from the pool
+  private blastCool = 0 // a moment after a blast hurts before another can
   // Alive, shattering (slow motion), dead (waiting for Jump), or gathering back together at the start.
   private mode: 'alive' | 'dying' | 'dead' | 'returning' = 'alive'
   private modeTime = 0
@@ -111,6 +133,8 @@ export class MainScene extends Phaser.Scene {
       w.__magic = () => ({ mana: this.mana.value, slot: this.slot, projectiles: this.magic.projectiles.length, hotbar: this.hotbar, charge: this.caster.charge })
       w.__setSpell = (i: number, spell: Spell) => { this.hotbar[i] = spell; this.syncHotbar() }
       w.__infiniteMana = (on: boolean) => { this.mana.infinite = on }
+      w.__setMana = (n: number) => { this.mana.value = n }
+      w.__health = () => ({ value: this.health.value, marks: this.health.marks.map((m) => m.kind) })
       w.__dummies = () => this.dummies.map((d) => ({ x: d.x, y: d.y, vx: d.vx, frozen: d.frozen, healed: d.healed, scorched: d.scorched }))
       w.__runes = () => this.magic.runes.length
       w.__anchors = () => this.magic.anchors.length
@@ -174,6 +198,8 @@ export class MainScene extends Phaser.Scene {
     this.simAcc += dt * STEPS_PER_SECOND
     for (let n = 0; this.simAcc >= 1 && n < 4; n++, this.simAcc--) simulate(this.grid)
     if (this.simAcc > 4) this.simAcc = 0
+    this.blastCool = Math.max(0, this.blastCool - dt)
+    this.handleBlasts()
 
     if (this.mode !== 'alive') {
       if (this.mode === 'dying' && this.modeTime > 1.1) this.setMode('dead')
@@ -195,7 +221,8 @@ export class MainScene extends Phaser.Scene {
     }
 
     const p = this.player
-    const ev = stepPlayer(p, input, dt, this.grid.isSolid, { submerged: this.submerged() })
+    const env = this.surroundings()
+    const ev = stepPlayer(p, input, dt, this.grid.isSolid, env)
     this.updateMagic(dt)
 
     if (ev.jumped) { this.squash.jump(); this.dust.puff(p.x, p.y, 6, 30) }
@@ -211,12 +238,15 @@ export class MainScene extends Phaser.Scene {
       this.dust.puff(p.x + ev.wallSliding * (PLAYER.width / 2), p.y - PLAYER.height * 0.6, 1, 8, ev.wallSliding === 1 ? -1 : 1)
     }
     if (ev.landed >= 0) { this.squash.land(ev.landed); this.dust.puff(p.x, p.y, 4 + Math.round(ev.landed * 8), 25 + ev.landed * 45) }
-    // Landing on something soft (sand, rubble, ash) halves the damage.
-    const under = this.grid.get(Math.floor(p.x), Math.floor(p.y))
-    const soft = under === Material.SAND || under === Material.RUBBLE || under === Material.ASH
-    const damage = Math.round(fallDamage(ev.fell) * (soft ? 0.5 : 1))
+    // Landing on something soft (sand, rubble, ash, dirt, moss) halves the damage; snow and slime take it all.
+    const under = this.grid.get(Math.floor(p.x), Math.floor(p.y)), at = this.grid.get(Math.floor(p.x), Math.floor(p.y) - 1)
+    const cushion = under === Material.SNOW || under === Material.SLIME || at === Material.SLIME ? 0 : SOFT.has(under) || SOFT.has(at) ? 0.5 : 1
+    const damage = Math.round(fallDamage(ev.fell) * cushion)
     if (damage > 0) this.hurt(damage, 0.25 + Math.random() * 0.5)
     if (this.mode !== 'alive') return
+    this.touchHazards(env, dt)
+    if (this.mode !== 'alive') return
+    this.soakMana(env, dt)
     // Stand-in rest spot: heals while standing on it.
     if (p.grounded && p.x > REST_SPOT.x0 && p.x < REST_SPOT.x1 && this.health.value < HEALTH.max) {
       this.health.heal(HEALTH.restRate * dt)
@@ -364,17 +394,90 @@ export class MainScene extends Phaser.Scene {
     hud.set({ slots: this.hotbar.map(describe), spells: this.hotbar.map((s) => ({ ...s, elements: [...s.elements] })), activeSlot: this.slot, maxMana: this.mana.max })
   }
 
-  /** How much of the player's body is in liquid, 0–1. */
-  private submerged(): number {
-    const p = this.player
-    let wet = 0, all = 0
-    for (let y = Math.floor(p.y - PLAYER.height); y < p.y; y += 2) {
-      for (let x = Math.floor(p.x - PLAYER.width / 2); x < p.x + PLAYER.width / 2; x += 2) {
-        all++
-        if (this.grid.get(x, y) === Material.WATER) wet++
+  /**
+   * What the player is in and touching: how much of the body is in liquid (or quicksand) and how
+   * thick it is, what's underfoot (ice and blood slip, slime bounces), anything that burns or
+   * poisons, and liquid mana.
+   */
+  private surroundings(): Feel {
+    const p = this.player, g = this.grid
+    const x0 = Math.floor(p.x - PLAYER.width / 2), x1 = Math.ceil(p.x + PLAYER.width / 2)
+    const y0 = Math.floor(p.y - PLAYER.height), y1 = Math.ceil(p.y)
+    let wet = 0, all = 0, drag = 0, hurt = 0, hurtX = 0, hurtN = 0, slippery = false, bouncy = false
+    const mana: number[] = []
+    for (let y = y0 - 1; y <= y1; y++) {
+      for (let x = x0 - 1; x <= x1; x++) {
+        const m = g.get(x, y), info = MATERIALS[m as Material]
+        if (x >= x0 && x < x1 && y >= y0 && y < y1) {
+          all++
+          if (KIND[m] === Kind.LIQUID || info.sink) { wet++; drag += info.drag ?? 1 }
+        }
+        const h = HURTS[m]
+        if (h) { hurt = Math.max(hurt, h); hurtX += x; hurtN++ }
+        if (m === Material.MANA) mana.push(y * g.width + x)
+        if (y >= y1 - 1 && x >= x0 && x < x1) {
+          if (m === Material.ICE || m === Material.BLOOD) slippery = true
+          if (m === Material.SLIME) bouncy = true
+        }
       }
     }
-    return all ? wet / all : 0
+    const hurtAt = hurtN ? Math.max(0, Math.min(1, (hurtX / hurtN + 0.5 - x0) / PLAYER.width)) : 0.5
+    return { submerged: all ? wet / all : 0, drag: wet ? drag / wet : 1, slippery, bouncy, hurt, hurtAt, mana }
+  }
+
+  /** Burning, eating and poisoning things eat cells away, a bite at a time. */
+  private touchHazards(env: Feel, dt: number): void {
+    if (env.hurt <= 0) { this.burnAcc = 0; return }
+    this.burnAcc += env.hurt * dt
+    if (this.burnAcc >= 3) {
+      const n = Math.floor(this.burnAcc)
+      this.burnAcc -= n
+      this.hurt(n, env.hurtAt, 'burn')
+    }
+  }
+
+  /** Standing in liquid mana refills mana, soaking the pool up. */
+  private soakMana(env: Feel, dt: number): void {
+    if (!env.mana.length || this.mana.infinite || this.mana.value >= this.mana.max) return
+    const gain = Math.min(this.mana.max - this.mana.value, MANA_POOL.rate * dt)
+    this.mana.value += gain
+    this.manaDrain += gain / MANA_POOL.perCell
+    const g = this.grid
+    while (this.manaDrain >= 1 && env.mana.length) {
+      const q = env.mana.splice((Math.random() * env.mana.length) | 0, 1)[0]
+      g.cells[q] = Material.EMPTY
+      g.life[q] = 0
+      this.manaDrain--
+    }
+  }
+
+  /** Explosions shove everything near and hurt the player (a blow: a dent), shaking the camera. */
+  private handleBlasts(): void {
+    const list = this.grid.blasts
+    if (!list.length) return
+    this.grid.blasts = []
+    this.cameras.main.shake(140, Math.min(0.012, 0.003 + list.length * 0.0008))
+    const alive = this.mode === 'alive'
+    for (const b of alive ? [this.playerBody, ...this.dummies] : this.dummies) {
+      const cx = b.x, cy = b.y - b.h / 2
+      let ix = 0, iy = 0, hit = 0
+      for (const bl of list) {
+        const d = Math.hypot(cx - bl.x, cy - bl.y), reach = bl.r * 2.5 + 6
+        if (d >= reach) continue
+        const f = 1 - d / reach, l = d || 1
+        hit += f
+        ix += ((cx - bl.x) / l) * 140 * f
+        iy += ((cy - bl.y) / l) * 140 * f - 60 * f
+      }
+      if (hit <= 0) continue
+      const mag = Math.hypot(ix, iy), cap = 260
+      if (mag > cap) { ix *= cap / mag; iy *= cap / mag }
+      b.impulse(ix, iy)
+      if (b === this.playerBody && this.blastCool <= 0) {
+        this.blastCool = 0.35
+        this.hurt(Math.min(45, Math.round(18 * hit)), 0.5)
+      }
+    }
   }
 
   private paintWorld(): void {
@@ -396,15 +499,17 @@ export class MainScene extends Phaser.Scene {
     hud.set({ dead: mode === 'dead' })
   }
 
-  /** Damage from anywhere (falls, for now). The body squashes, flashes and dents; at zero it shatters. */
-  private hurt(amount: number, at: number): void {
+  /** Damage from anywhere. The body squashes, flashes and dents (or, burnt, loses cells); at zero it shatters. */
+  private hurt(amount: number, at: number, kind: 'dent' | 'burn' = 'dent'): void {
     const p = this.player
-    const dead = this.health.hurt(amount, 'dent', at)
-    this.squash.set(1.35, 0.7) // the guide's getting-hurt squash
+    const dead = this.health.hurt(amount, kind, at)
+    if (kind === 'burn') this.squash.set(1.12, 0.9) // a flinch, not the full blow
+    else this.squash.set(1.35, 0.7) // the guide's getting-hurt squash
     this.hurtFlash = 0.1
     this.hurtFace = 0.5
     this.updateFace(0)
-    this.dust.puff(p.x, p.y, 10, 60)
+    if (kind === 'dent') this.dust.puff(p.x, p.y, 10, 60)
+    else this.dust.puff(p.x + (at - 0.5) * PLAYER.width, p.y - 1, 3, 18) // bits of the body, eaten away
     this.syncHealth()
     if (dead) {
       this.shatter.burst(this.figureCells(), p.x, p.y - PLAYER.height / 2)

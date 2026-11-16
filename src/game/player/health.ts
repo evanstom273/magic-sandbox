@@ -17,7 +17,7 @@ export function fallDamage(cells: number): number {
 
 /** A mark on the body, where damage came from. `amount` is the health it stands for; it shrinks as health heals. */
 export interface Mark {
-  kind: 'dent' // falls (and later blows) dent; fire and acid will eat cells instead
+  kind: 'dent' | 'burn' // falls and blows dent; fire, lava and acid eat cells away instead
   at: number // 0–1 across the body's bottom edge
   amount: number
   seed: number
@@ -33,7 +33,10 @@ export class Health {
     if (amount <= 0) return false
     const taken = Math.min(amount, this.value)
     this.value -= taken
-    this.marks.push({ kind, at, amount: taken, seed: this.nextSeed++ })
+    // Burning in one place keeps eating the same bite, rather than leaving a mark every moment.
+    const last = this.marks[this.marks.length - 1]
+    if (kind === 'burn' && last?.kind === 'burn' && Math.abs(last.at - at) < 0.25) last.amount += taken
+    else this.marks.push({ kind, at, amount: taken, seed: this.nextSeed++ })
     return this.value <= 0
   }
 

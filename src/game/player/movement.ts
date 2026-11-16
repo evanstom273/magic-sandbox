@@ -84,12 +84,16 @@ const approach = (v: number, target: number, amount: number) =>
 
 /** What the world around the player is like this step (from the scene). */
 export interface Surroundings {
-  submerged: number // 0–1: how much of the body is in liquid
+  submerged: number // 0–1: how much of the body is in liquid (or quicksand)
+  drag?: number // how freely you move in what you're in: 1 water; mud, honey, tar and quicksand far less
+  slippery?: boolean // standing on ice or blood: slow to get going and slow to stop
+  bouncy?: boolean // standing in slime: jumps go higher
 }
 
 export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid: SolidAt, env: Surroundings = { submerged: 0 }): StepEvents {
   const T = PLAYER
   const swimming = env.submerged > 0.35
+  const drag = swimming ? env.drag ?? 1 : 1
   // Buried by falling sand or rubble: pushed up out of it.
   for (let i = 0; i < 6 && boxHits(solid, s.x, s.y); i++) s.y -= 1
   const ev: StepEvents = {
@@ -124,8 +128,8 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   if (s.onWall === 0) {
     if (move !== 0) s.facing = move > 0 ? 1 : -1
     if (s.grounded && move !== 0 && Math.sign(move) !== Math.sign(s.vx) && Math.abs(s.vx) > T.walkSpeed * 0.6) ev.skidded = true
-    const accel = s.grounded ? (move !== 0 ? T.groundAccel : T.groundDecel) : T.airAccel
-    s.vx = approach(s.vx, move * T.walkSpeed * (swimming ? 0.6 : 1), accel * dt)
+    const accel = (s.grounded ? (move !== 0 ? T.groundAccel : T.groundDecel) : T.airAccel) * (s.grounded && env.slippery ? 0.15 : 1)
+    s.vx = approach(s.vx, move * T.walkSpeed * (swimming ? 0.6 * drag : 1), accel * dt)
   } else {
     s.facing = s.onWall
     s.vx = 0
@@ -136,10 +140,10 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     const wall = s.onWall !== 0 ? s.onWall : s.grounded ? 0 : wallNear(solid, s, T.wallJumpReach)
     if (swimming && pressed) {
       // Swimming: every press is a stroke upwards.
-      s.vy = -T.swimStroke
+      s.vy = -T.swimStroke * drag
       s.buffer = 0
     } else if (s.grounded || s.coyote > 0) {
-      s.vy = -T.jumpSpeed
+      s.vy = -T.jumpSpeed * (env.bouncy ? 1.4 : 1)
       s.grounded = false
       s.coyote = 0
       s.buffer = 0
@@ -158,7 +162,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
 
   s.boost = Math.max(0, s.boost - dt)
   if (!input.jump && s.boost <= 0 && s.vy < -T.jumpSpeed * T.jumpCut) s.vy = -T.jumpSpeed * T.jumpCut
-  s.vy = Math.min(swimming ? T.swimSink : T.maxFall, s.vy + T.gravity * (swimming ? 0.25 : 1) * dt)
+  s.vy = Math.min(swimming ? T.swimSink * drag : T.maxFall, s.vy + T.gravity * (swimming ? 0.25 : 1) * dt)
   if (swimming) { s.fallDist = 0; s.airJumps = T.airJumps } // water breaks a fall
 
   // On a wall: hold still while pushing towards it, slide down when let go. Pushing into a wall

@@ -1,25 +1,36 @@
-import { CellGrid, DENSITY, Kind, KIND, Material as M, MATERIALS } from './grid.ts'
+import { CellGrid, DENSITY, HEAT, Kind, KIND, Material as M, MATERIALS } from './grid.ts'
+import { BLUE, EXPLODES, explode, FUEL, GOLD, heatTouch, LIFE, lifeFor, lifeSteps, LIT, perSec, RICH, rnd } from './reactions.ts'
 
-// The falling-sand rules. One step moves powders down, liquids down and sideways, gases up, and
-// runs the reactions that happen on contact (Element Codex, "When materials meet").
+export { FUEL, lifeFor, lifeSteps, STEPS_PER_SECOND } from './reactions.ts'
 
-export const STEPS_PER_SECOND = 120
-const rnd = Math.random
-/** A per-second chance as a per-step chance. */
-const perSec = (n: number) => n / STEPS_PER_SECOND
-export const lifeSteps = (seconds: number) => Math.max(1, Math.round(seconds * STEPS_PER_SECOND))
-/** Marks a fire as burning fuel (wood, plants): it stays put for its whole life. Loose flames rise. */
-export const FUEL = 0x8000
-const LIFE = 0x7fff
+// The falling-sand rules. One step moves powders down, liquids down and sideways, gases up (or
+// low), and runs the reactions that happen on contact (Element Codex, "When materials meet").
 
-export function lifeFor(m: number): number {
-  if (m === M.STEAM) return lifeSteps(2 + rnd() * 2)
-  if (m === M.SMOKE) return lifeSteps(0.8 + rnd() * 0.8)
-  if (m === M.FIRE) return lifeSteps(0.4 + rnd() * 0.5)
-  return 0
+const INFO = Object.values(MATERIALS)
+const FLOW = INFO.map((m) => m.flow ?? 1)
+const SPREAD = INFO.map((m) => m.spread ?? 2)
+const SLOPE = INFO.map((m) => m.slope ?? 1)
+const LIFT = INFO.map((m) => m.lift ?? 1)
+const STICKY = INFO.map((m) => !!m.sticky)
+
+/** Materials that do something besides moving: react with what they touch, grow, age. */
+const ACTIVE = new Uint8Array(INFO.length)
+for (const m of [
+  M.WATER, M.SALT_WATER, M.ACID, M.LAVA, M.MOLTEN, M.PLASMA, M.BURNING_THERMITE, M.ROT, M.PLANT, M.FUNGUS,
+  M.SPORES, M.SEEDS, M.SALT, M.MUD, M.SPIRITS, M.MIST, M.STEAM, M.ASH, M.BLOOD, M.GUNPOWDER,
+]) ACTIVE[m] = 1
+
+/** What acid eats, and how fast (a second, touching). Obsidian, glass and gold hold it. */
+const EATS: Partial<Record<number, number>> = {
+  [M.STONE]: 1.5, [M.RUBBLE]: 2, [M.SAND]: 2, [M.METAL]: 0.4, [M.WOOD]: 2, [M.PLANT]: 4, [M.DIRT]: 2,
+  [M.CLAY]: 1.5, [M.BRICK]: 0.3, [M.BONE]: 2, [M.COAL]: 1.5, [M.CRYSTAL]: 0.3, [M.SALT]: 3, [M.SNOW]: 4,
+  [M.ICE]: 2, [M.FUNGUS]: 4, [M.SEEDS]: 4, [M.ROT]: 4, [M.AMBER]: 1, [M.HARD_TAR]: 1, [M.QUICKSAND]: 2,
+  [M.FROZEN_QUICKSAND]: 2, [M.ASH]: 3, [M.GUNPOWDER]: 2, [M.THERMITE]: 1,
 }
 
 const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const
+/** A per-second chance for something touching one particular neighbour, when a cell checks one neighbour a step. */
+const touch = (n: number) => perSec(n * 4)
 
 export function step(g: CellGrid): void {
   g.step++
@@ -32,15 +43,17 @@ export function step(g: CellGrid): void {
       const m = c[p]
       if (m === M.EMPTY || stamp[p] === now) continue
       const k = KIND[m]
-      if (k === Kind.SOLID) continue
       if (k === Kind.FIRE) { fire(g, x, y, p); continue }
-      if (k === Kind.GAS) { gas(g, x, y, p, m, dir); continue }
-      if (k === Kind.PLANT) { plant(g, x, y); continue }
-      if (k === Kind.POWDER) { powder(g, x, y, p, m, dir); continue }
-      if (k === Kind.LIQUID) liquid(g, x, y, p, m, dir)
+      if (ACTIVE[m] && react(g, x, y, p, m)) continue
+      if (k === Kind.GAS) gas(g, x, y, p, m, dir)
+      else if (k === Kind.POWDER) powder(g, x, y, p, m, dir)
+      else if (k === Kind.LIQUID) liquid(g, x, y, p, m, dir)
     }
   }
 }
+
+/** What a gas leaves when its time runs out: steam partly rains back; the rest just thin away. */
+const gasEnd = (m: number) => (m === M.STEAM && rnd() < 0.3 ? M.WATER : M.EMPTY)
 
 /** Swaps the cell at p (the one moving) with q. */
 function swap(g: CellGrid, p: number, q: number): void {
@@ -54,7 +67,7 @@ function swap(g: CellGrid, p: number, q: number): void {
   const kp = KIND[c[p]]
   if (kp === Kind.GAS || kp === Kind.FIRE) {
     if ((l[p] & LIFE) > 1) l[p]--
-    else c[p] = c[p] === M.STEAM && rnd() < 0.3 ? M.WATER : M.EMPTY // its time ran out while being shoved
+    else { c[p] = kp === Kind.GAS ? gasEnd(c[p]) : M.EMPTY; l[p] = 0 } // its time ran out while being shoved
   }
 }
 
@@ -69,18 +82,34 @@ function canEnter(g: CellGrid, m: number, q: number): boolean {
 
 function powder(g: CellGrid, x: number, y: number, p: number, m: number, dir: number): void {
   if (y + 1 >= g.height) return
-  const b = p + g.width
+  if (FLOW[m] < 1 && rnd() > FLOW[m]) return // light powders (snow, ash, seeds) drift down slower
+  const W = g.width, b = p + W
   if (canEnter(g, m, b)) return swap(g, p, b)
+  if (SLOPE[m] === 2) {
+    // Holds a slope: slides only off a steep drop (two open cells down the diagonal), and reluctantly.
+    if (rnd() > 0.1) return
+    for (const d of [dir, -dir]) {
+      if (g.inside(x + d, y + 2) && canEnter(g, m, b + d) && canEnter(g, m, b + W + d)) return swap(g, p, b + d)
+    }
+    return
+  }
   for (const d of [dir, -dir]) if (g.inside(x + d, y + 1) && canEnter(g, m, b + d)) return swap(g, p, b + d)
 }
 
+/** Clinging to a wall or ceiling beside or above it. */
+function clings(g: CellGrid, x: number, y: number): boolean {
+  return KIND[g.get(x - 1, y)] === Kind.SOLID || KIND[g.get(x + 1, y)] === Kind.SOLID || KIND[g.get(x, y - 1)] === Kind.SOLID
+}
+
 function liquid(g: CellGrid, x: number, y: number, p: number, m: number, dir: number): void {
+  if (FLOW[m] < 1 && rnd() > FLOW[m]) return // thick liquids (lava, mud, honey, tar) move slowly
+  if (STICKY[m] && clings(g, x, y)) return
   if (y + 1 < g.height) {
     const b = p + g.width
     if (canEnter(g, m, b)) return swap(g, p, b)
     for (const d of [dir, -dir]) if (g.inside(x + d, y + 1) && canEnter(g, m, b + d)) return swap(g, p, b + d)
   }
-  const spread = MATERIALS[m as M].spread ?? 2
+  const spread = SPREAD[m]
   for (const d of [dir, -dir]) {
     let t = -1
     for (let s = 1; s <= spread; s++) {
@@ -94,49 +123,57 @@ function liquid(g: CellGrid, x: number, y: number, p: number, m: number, dir: nu
 }
 
 function gas(g: CellGrid, x: number, y: number, p: number, m: number, dir: number): void {
-  if (g.life[p] <= 1) {
-    // Steam partly condenses back to water; smoke just thins away.
-    g.set(x, y, m === M.STEAM && rnd() < 0.3 ? M.WATER : M.EMPTY)
-    return
-  }
+  if ((g.life[p] & LIFE) <= 1) { g.set(x, y, gasEnd(m)); return }
   g.life[p]--
   if (rnd() < 0.25) return
-  if (y > 0) {
-    const u = p - g.width, mu = g.cells[u], ku = KIND[mu]
+  const W = g.width, lift = LIFT[m]
+  if (lift > 0 && y > 0 && rnd() < lift) {
+    // Rising: up through anything loose (bubbling up through water), or up and aside into the open.
+    const u = p - W, mu = g.cells[u], ku = KIND[mu]
     if (mu === M.EMPTY || ku === Kind.LIQUID || ku === Kind.POWDER) return swap(g, p, u)
     const d = rnd() < 0.5 ? dir : -dir
     if (g.inside(x + d, y - 1) && g.cells[u + d] === M.EMPTY) return swap(g, p, u + d)
+  } else if (lift < 0 && y + 1 < g.height && rnd() < -lift) {
+    // Sinking low (miasma, spores): down into the open only.
+    const b = p + W
+    if (g.cells[b] === M.EMPTY) return swap(g, p, b)
+    const d = rnd() < 0.5 ? dir : -dir
+    if (g.inside(x + d, y + 1) && g.cells[b + d] === M.EMPTY) return swap(g, p, b + d)
   }
   const d = rnd() < 0.5 ? 1 : -1
   if (g.inside(x + d, y) && g.cells[p + d] === M.EMPTY) swap(g, p, p + d)
 }
 
 function fire(g: CellGrid, x: number, y: number, p: number): void {
-  const fuel = (g.life[p] & FUEL) !== 0
-  if ((g.life[p] & LIFE) <= 1) {
-    // Burnt-out fuel leaves smoke and sometimes ash; a loose flame just leaves a little smoke.
+  const l = g.life[p], fuel = (l & FUEL) !== 0
+  if ((l & LIFE) <= 1) {
+    // Burnt-out fuel leaves smoke and sometimes ash; a loose flame (or spirits) just a little smoke.
     const r = rnd()
     if (r < (fuel ? 0.35 : 0.15)) g.set(x, y, M.SMOKE, lifeFor(M.SMOKE))
-    else if (fuel && r < 0.5) g.set(x, y, M.ASH)
+    else if (fuel && !(l & BLUE) && r < 0.5) g.set(x, y, M.ASH)
     else g.set(x, y, M.EMPTY)
     return
   }
-  g.life[p]--
+  g.life[p] = l - 1
   for (const [dx, dy] of N4) {
     const nx = x + dx, ny = y + dy
     if (!g.inside(nx, ny)) continue
-    const mq = g.get(nx, ny)
-    if (mq === M.WOOD && rnd() < perSec(9)) g.set(nx, ny, M.FIRE, FUEL | lifeSteps(0.9 + rnd() * 1.2))
-    else if (mq === M.PLANT && rnd() < perSec(12)) g.set(nx, ny, M.FIRE, FUEL | lifeSteps(0.4 + rnd() * 0.4))
-    else if (mq === M.WATER && rnd() < perSec(25)) {
-      g.set(x, y, M.EMPTY)
-      if (rnd() < 0.5) g.set(nx, ny, M.STEAM, lifeFor(M.STEAM))
-      return
-    } else if (mq === M.ICE && rnd() < perSec(3)) g.set(nx, ny, M.WATER)
+    const n = g.cells[ny * g.width + nx]
+    if (n === M.WATER || n === M.SALT_WATER) {
+      // Water puts it out, with a puff of steam.
+      if (rnd() < perSec(25)) {
+        g.set(x, y, M.EMPTY)
+        if (rnd() < 0.5) g.set(nx, ny, M.STEAM, lifeFor(M.STEAM))
+        return
+      }
+      continue
+    }
+    if (n === M.ASH && rnd() < perSec(2)) { g.set(x, y, M.SMOKE, lifeFor(M.SMOKE)); return } // smothered
+    heatTouch(g, nx, ny, 1)
   }
   // Burning fuel stays put and sends small flames up; loose flames lick upwards.
   if (fuel) {
-    if (y > 0 && g.cells[p - g.width] === M.EMPTY && rnd() < perSec(8)) g.set(x, y - 1, M.FIRE, lifeSteps(0.15 + rnd() * 0.2))
+    if (y > 0 && g.cells[p - g.width] === M.EMPTY && rnd() < perSec(8)) g.set(x, y - 1, M.FIRE, (l & BLUE) | lifeSteps(0.15 + rnd() * 0.2))
     return
   }
   if (y > 0 && rnd() < 0.45) {
@@ -147,12 +184,186 @@ function fire(g: CellGrid, x: number, y: number, p: number): void {
   }
 }
 
+/** One random neighbour: its position and material (or -1 outside the world). */
+function neighbour(g: CellGrid, x: number, y: number): [number, number, number] {
+  const [dx, dy] = N4[(rnd() * 4) | 0]
+  const nx = x + dx, ny = y + dy
+  return [nx, ny, g.inside(nx, ny) ? g.cells[ny * g.width + nx] : -1]
+}
+
+/** Reactions for the materials that have them. Returns true if the cell itself changed (so it doesn't move this step). */
+function react(g: CellGrid, x: number, y: number, p: number, m: number): boolean {
+  switch (m) {
+    case M.WATER:
+    case M.SALT_WATER: {
+      const [nx, ny, n] = neighbour(g, x, y)
+      if (n === M.DIRT && rnd() < touch(0.6)) {
+        g.set(nx, ny, M.MUD) // soaks in
+        if (rnd() < 0.5) { g.set(x, y, M.EMPTY); return true }
+      } else if (n === M.CLAY && rnd() < touch(0.05)) g.set(nx, ny, M.MUD) // softens, slowly
+      else if (n === M.SALT && m === M.WATER && rnd() < touch(2)) {
+        g.set(nx, ny, M.EMPTY) // dissolves: salty water won't freeze, and plants won't grow in it
+        g.set(x, y, M.SALT_WATER)
+        return true
+      }
+      return false
+    }
+    case M.ACID: {
+      const [nx, ny, n] = neighbour(g, x, y)
+      if (n === M.WATER || n === M.SALT_WATER) {
+        if (rnd() < touch(0.3)) { g.set(x, y, M.WATER); return true } // diluted
+        return false
+      }
+      const rate = EATS[n]
+      if (rate && rnd() < touch(rate)) {
+        // Eaten cell by cell, giving off smoke; the acid is used up as it goes.
+        if (rnd() < 0.3) g.set(nx, ny, M.SMOKE, lifeFor(M.SMOKE))
+        else g.set(nx, ny, M.EMPTY)
+        if (rnd() < 0.35) { g.set(x, y, M.SMOKE, lifeFor(M.SMOKE)); return true }
+      }
+      return false
+    }
+    case M.GUNPOWDER: {
+      const l = g.life[p]
+      if (!(l & LIT)) return false
+      if ((l & LIFE) <= 1) { explode(g, x, y, EXPLODES[M.GUNPOWDER]!.r); return true }
+      g.life[p] = l - 1
+      return true // a lit grain fizzes where it is for its moment, rather than falling into the crater
+    }
+    case M.LAVA:
+    case M.MOLTEN:
+    case M.PLASMA:
+    case M.BURNING_THERMITE:
+      return hot(g, x, y, p, m)
+    case M.ROT: {
+      const l = g.life[p]
+      if (l <= 1) { g.set(x, y, M.DIRT); return true } // crumbles to soil
+      g.life[p] = l - 1
+      const [nx, ny, n] = neighbour(g, x, y)
+      if ((n === M.WOOD || n === M.PLANT) && rnd() < touch(0.3) && !salted(g, x, y)) g.set(nx, ny, M.ROT, lifeFor(M.ROT))
+      else if (n === M.EMPTY && rnd() < touch(0.02)) {
+        const gas = rnd() < 0.7 ? M.MIASMA : M.SWAMP_GAS
+        g.set(nx, ny, gas, lifeFor(gas))
+      }
+      return false
+    }
+    case M.PLANT: plant(g, x, y); return false
+    case M.FUNGUS: {
+      const [nx, ny, n] = neighbour(g, x, y)
+      if ((n === M.ROT || n === M.WOOD) && rnd() < touch(0.05)) g.set(nx, ny, M.FUNGUS) // spreads over rot and wood
+      else if (n === M.EMPTY && rnd() < touch(0.02)) g.set(nx, ny, M.SPORES, lifeFor(M.SPORES)) // puffs spores
+      return false
+    }
+    case M.SPORES: {
+      const [, , n] = neighbour(g, x, y)
+      if ((n === M.WOOD || n === M.ROT || n === M.DIRT) && rnd() < touch(0.5)) { g.set(x, y, M.FUNGUS); return true }
+      return false
+    }
+    case M.SEEDS: {
+      // Sprout with dirt (or mud) under them and water about.
+      if (rnd() > perSec(0.3)) return false
+      const below = g.get(x, y + 1)
+      if (below !== M.DIRT && below !== M.MUD) return false
+      let wet = below === M.MUD
+      for (const [dx, dy] of N4) {
+        const a = g.get(x + dx, y + dy), b = g.get(x + dx, y + 1 + dy)
+        if (a === M.WATER || a === M.MUD || b === M.WATER || b === M.MUD) wet = true
+      }
+      if (!wet) return false
+      g.set(x, y, M.PLANT)
+      if (g.get(x, y - 1) === M.EMPTY) g.set(x, y - 1, M.PLANT)
+      return true
+    }
+    case M.SALT: {
+      const [nx, ny, n] = neighbour(g, x, y)
+      if ((n === M.ICE || n === M.SNOW) && rnd() < touch(1)) {
+        g.set(nx, ny, M.WATER) // melts them
+        if (rnd() < 0.3) { g.set(x, y, M.EMPTY); return true }
+      } else if (n === M.SLIME && rnd() < touch(3)) g.set(nx, ny, M.EMPTY) // shrivels it
+      return false
+    }
+    case M.MUD:
+      // Now and then a bubble of swamp gas.
+      if (y > 0 && g.cells[p - g.width] === M.EMPTY && rnd() < perSec(0.003)) g.set(x, y - 1, M.SWAMP_GAS, lifeFor(M.SWAMP_GAS))
+      return false
+    case M.SPIRITS: {
+      if (y > 0 && g.cells[p - g.width] === M.EMPTY && rnd() < perSec(0.05)) { g.set(x, y, M.EMPTY); return true } // evaporates
+      const [nx, ny, n] = neighbour(g, x, y)
+      if ((n === M.ROT || n === M.SLIME) && rnd() < touch(2)) {
+        g.set(nx, ny, M.EMPTY) // washed away
+        if (rnd() < 0.3) { g.set(x, y, M.EMPTY); return true }
+      }
+      return false
+    }
+    case M.MIST:
+      if (rnd() < perSec(0.03)) { g.set(x, y, M.WATER); return true } // rains out, slowly
+      return false
+    case M.STEAM:
+      // Condenses on a ceiling into drops: rain.
+      if (y > 0 && KIND[g.cells[p - g.width]] === Kind.SOLID && rnd() < perSec(0.4)) { g.set(x, y, M.WATER); return true }
+      return false
+    case M.ASH:
+    case M.BLOOD: {
+      // Worked into dirt, it makes richer soil.
+      const [nx, ny, n] = neighbour(g, x, y)
+      const q = ny * g.width + nx
+      if (n === M.DIRT && !(g.life[q] & RICH) && rnd() < touch(m === M.ASH ? 0.1 : 0.5)) {
+        g.life[q] |= RICH
+        g.set(x, y, M.EMPTY)
+        return true
+      }
+      return false
+    }
+  }
+  return false
+}
+
+/** Something hot: it heats what it touches, and water quenches it (lava to obsidian, molten metal sets). */
+function hot(g: CellGrid, x: number, y: number, p: number, m: number): boolean {
+  if (m === M.MOLTEN || m === M.BURNING_THERMITE) {
+    const l = g.life[p]
+    if ((l & LIFE) <= 1) {
+      // Molten metal sets back into whichever metal it was; thermite burns out to a little slag.
+      if (m === M.MOLTEN) g.set(x, y, l & GOLD ? M.GOLD : M.METAL)
+      else g.set(x, y, rnd() < 0.3 ? M.RUBBLE : M.EMPTY)
+      return true
+    }
+    g.life[p] = l - 1
+  }
+  const level = HEAT[m], scale = m === M.BURNING_THERMITE ? 4 : 1
+  for (const [dx, dy] of N4) {
+    const nx = x + dx, ny = y + dy
+    if (!g.inside(nx, ny)) continue
+    const n = g.cells[ny * g.width + nx]
+    if (n === M.WATER || n === M.SALT_WATER) {
+      if (rnd() < perSec(30)) {
+        if (n === M.SALT_WATER && rnd() < 0.3) g.set(nx, ny, M.SALT) // the salt's left behind
+        else g.set(nx, ny, M.STEAM, lifeFor(M.STEAM))
+        if (m === M.LAVA) { g.set(x, y, M.OBSIDIAN); return true }
+        if (m === M.MOLTEN) { g.set(x, y, g.life[p] & GOLD ? M.GOLD : M.METAL); return true }
+      }
+      continue
+    }
+    heatTouch(g, nx, ny, level, scale)
+  }
+  return false
+}
+
+function salted(g: CellGrid, x: number, y: number): boolean {
+  for (const [dx, dy] of N4) if (g.get(x + dx, y + dy) === M.SALT) return true
+  return false
+}
+
 function plant(g: CellGrid, x: number, y: number): void {
-  // Plants beside water slowly spread into open space next to them.
-  if (rnd() > perSec(0.05)) return
-  let wet = false
-  for (const [dx, dy] of N4) if (g.get(x + dx, y + dy) === M.WATER) wet = true
-  if (!wet) return
+  // Plants beside water (or mud) slowly spread into open space next to them; faster on rich soil.
+  if (rnd() > perSec(0.15)) return
+  let wet = false, rich = false
+  for (const [dx, dy] of N4) {
+    const n = g.get(x + dx, y + dy)
+    if (n === M.WATER || n === M.MUD) wet = true
+    else if (n === M.DIRT && g.life[(y + dy) * g.width + x + dx] & RICH) rich = true
+  }
+  if (!wet || (!rich && rnd() > 1 / 3)) return
   const [dx, dy] = N4[(rnd() * 4) | 0]
   if (g.get(x + dx, y + dy) === M.EMPTY) g.set(x + dx, y + dy, M.PLANT)
 }

@@ -39,7 +39,7 @@ export class CellBody {
     b.cells.set(this.cells)
     const W = this.width, H = this.height
     for (const m of marks) {
-      if (m.kind !== 'dent') continue
+      if (m.kind === 'burn') { this.bite(b, m, fallCap); continue }
       const depth = Math.max(1, Math.min(Math.floor(H * 0.42), Math.round((m.amount / fallCap) * H * 0.42)))
       const half = 1.5 + depth * 0.8
       const cx = 1 + m.at * (W - 3)
@@ -62,6 +62,25 @@ export class CellBody {
     }
     b.reink()
     return b
+  }
+
+  /** A burn: a ragged bite eaten out of the body's bottom edge, with a few pits around it. */
+  private bite(b: CellBody, m: Mark, fallCap: number): void {
+    const W = this.width, H = this.height
+    const depth = Math.max(1, Math.min(Math.floor(H * 0.5), Math.round((m.amount / fallCap) * H * 0.5)))
+    const half = 1.5 + depth * 0.9
+    const cx = 1 + m.at * (W - 3)
+    let r = (m.seed * 7919 + 104729) % 233280
+    const next = () => (r = (r * 9301 + 49297) % 233280)
+    for (let x = 0; x < W; x++) {
+      const t = (x + 0.5 - cx) / (half + 0.5)
+      if (Math.abs(t) >= 1) continue
+      const d = Math.max(0, Math.round(depth * (1 - t * t)) + (next() % 3) - 1)
+      for (let y = H - d; y < H; y++) b.cells[y * W + x] = BodyCell.EMPTY
+      // Pits just above the bite.
+      const py = H - d - 1 - (next() % 2)
+      if (py > 1 && next() % 3 === 0) b.cells[py * W + x] = BodyCell.EMPTY
+    }
   }
 
   /** Redraws the outline along whatever edge the body now has. */

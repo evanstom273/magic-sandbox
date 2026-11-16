@@ -16,14 +16,14 @@ Authoritative, living record of the game's design. It's updated after everything
 
 ## A. Project Overview
 
-A **voxel-based magic physics game** (History #7, #8): **a mix between Terraria and Noita** (History #9), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
+A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:10:35+00:00):**
+**Where the project stands (as of 2026-11-16T20:13:02+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
-- Lyra has started explaining the top-level design (History #7–#10); rounds of questions expand it once she's done.
+- Lyra is explaining the top-level design (History #7–#13); rounds of questions expand it once she's done.
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -33,7 +33,7 @@ A **voxel-based magic physics game** (History #7, #8): **a mix between Terraria 
 
 **Art style:** Stylised Geometry, kept in `stylised-geometry/`: the guide (`STYLISED_GEOMETRY.md`), seven SVG reference sheets and `make_sheets.py`, which regenerates them. In short: characters built from simple geometric shapes, with faces and floating hands, in a dark world lit around them, all drawn from shapes in code or SVG rather than sprites. The guide is the reference for how things look; this document records the game's own design.
 
-**The style guide is a reference, not gospel** *(Lyra, for the stealth game; carried over)*. It informs how things look; it doesn't decide anything. Where this game wants something different, the game wins, and Claude shouldn't present the guide's rules as reasons on their own.
+**The style guide is a reference, not gospel** *(Lyra, for the stealth game, and restated for this one — History #13)*. It informs how things look; it doesn't decide anything. Where this game wants something different, the game wins, and Claude shouldn't present the guide's rules as reasons on their own.
 
 **Guiding principles** *(carried over from Lyra's previous design documents; flag if any don't apply here)*:
 - Small, polished and functional beats large and placeholder-filled.
@@ -138,13 +138,16 @@ Don't rush through the questions simply to get to implementation. The design pro
 *Categories are added as the design grows.*
 
 ### Concept
-- **Voxel-based.** Lyra's word; whether that means a flat grid of cells or 3D voxels is open (§E). *(2026-11-16T20:10:35+00:00, documentation time — History #7)*
+- **Voxel-based.** Lyra's word; ~~whether that means a flat grid of cells or 3D voxels is open (§E)~~ a flat grid of cells, seen side-on (#12). *(2026-11-16T20:10:35+00:00, documentation time — History #7)*
 - **A magic physics game.** *(2026-11-16T20:10:35+00:00, documentation time — History #8)*
-- **A mix between Terraria and Noita.** Which parts of each is still to be explored. *(2026-11-16T20:10:35+00:00, documentation time — History #9)*
+- **A mix between Terraria and Noita.** ~~Which parts of each is still to be explored.~~ Terraria's look, Noita's physics and magic (#11). *(2026-11-16T20:10:35+00:00, documentation time — History #9)*
+- **The look of Terraria, with the physics and magic of Noita.** That's what the mix means. *(2026-11-16T20:13:02+00:00, documentation time — History #11)*
+- **Flat and seen side-on**, like Terraria: the voxels are a 2D grid of cells, not 3D. Read from "the look of Terraria"; flag if wrong. *(2026-11-16T20:13:02+00:00, documentation time — History #12)*
 
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
-- **The characters are in Lyra's Stylised Geometry style.** The world is voxels; how much of the guide applies to it is open (§E). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
+- **The characters are in Lyra's Stylised Geometry style.** The world is voxels~~; how much of the guide applies to it is open (§E)~~, with Terraria's look (#11). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
+- **The style guide is a guide, not gospel.** Lyra, restating it for this game: it informs the look, it doesn't set rules the game has to follow. *(2026-11-16T20:13:02+00:00, documentation time — History #13)*
 
 ### Technical architecture / platform
 - **Stack: the same as the stealth game's.** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js; React as the outer shell with Phaser running inside one React component, Phaser 4, and Dexie added when there's first something to save. *(2026-11-16T20:00:02+00:00, documentation time — History #3)*
@@ -163,7 +166,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-**In design: the top level.** Lyra is explaining it: a voxel-based magic physics game, a mix between Terraria and Noita, with Stylised Geometry characters (#7–#10). Rounds of questions expand it once she's done. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
+**In design: the top level.** Lyra is explaining it: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Rounds of questions expand it once she's done. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
 
 **Artifacts:** none yet.
 
@@ -183,9 +186,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 2. **The concept:** ~~what the game is~~ (#7–#10); who the player is.
 3. ~~**Stack.**~~ The stealth game's, on GitHub Pages for now (#3, #4).
 4. **Platforms and input.**
-5. **What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).
-6. **Which parts of Terraria and which of Noita** (#9). They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.
-7. **How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.
+5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
+6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
+7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
+8. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 
 ---
 
@@ -207,7 +211,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 ### Implementation interpretations (technical, not design decisions — flag if wrong)
 - **The art style zip was committed unpacked**, as the `stylised-geometry/` folder rather than the `.zip` itself, since the guide is written to be copied into a project as a folder. `make_sheets.py` went into `sheets/`, where the guide says it lives. Same as in the stealth game.
 - **The document is named `GAME_DESIGN.md`**, the name the stealth game's design doc started with, until this game has a name of its own.
-- **Carried over from `STEALTH_GAME_DESIGN.md` rather than decided for this project:** the style guide being a reference, not gospel; the guiding principles and Lyra's three workflow sections in §A (with the document's name in her words changed to `GAME_DESIGN.md`); and the "explain before adding" and merge-to-`main` standing orders in §H. Everything else, from the stealth game's concept to its stack, was left behind.
+- **Carried over from `STEALTH_GAME_DESIGN.md` rather than decided for this project:** ~~the style guide being a reference, not gospel;~~ (since restated by Lyra, #13); the guiding principles and Lyra's three workflow sections in §A (with the document's name in her words changed to `GAME_DESIGN.md`); and the "explain before adding" and merge-to-`main` standing orders in §H. Everything else, from the stealth game's concept to its stack, was left behind.
 - **"Basically the same" stack** is read as including how the stealth game's parts fit together (its History #7–#9): React as the shell with Phaser in one component, Phaser 4, and Dexie only once something needs saving. Its testing setup (Vitest, plus a Playwright smoke test) isn't recorded as decided here.
 - ~~**The workflow skips cleanly while there's no `package.json`**, so pushes to `main` don't pile up failed runs before the scaffold exists. The check can come out once the scaffold is in.~~ Taken out with the scaffold.
 - **Linter: oxlint**, which Vite's template ships now, as in the stealth game.
@@ -240,6 +244,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 8 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Concept | A magic physics game. |
 | 9 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Concept | A mix between Terraria and Noita. |
 | 10 | 2026-11-16T20:10:35+00:00 *(documentation time)* | Art | Characters in Lyra's Stylised Geometry art style; the world is voxels. |
+| 11 | 2026-11-16T20:13:02+00:00 *(documentation time)* | Concept | The mix means the look of Terraria with the physics and magic of Noita. Refines #9. |
+| 12 | 2026-11-16T20:13:02+00:00 *(documentation time)* | Concept | Flat and seen side-on: the voxels are a 2D grid of cells, not 3D (read from "the look of Terraria"). Answers the open question on #7. |
+| 13 | 2026-11-16T20:13:02+00:00 *(documentation time)* | Art | The style guide is a guide, not gospel (restated by Lyra for this game). |
 
 ---
 

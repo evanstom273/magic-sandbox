@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T21:41:08+00:00):**
+**Where the project stands (as of 2026-11-16T21:42:51+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -181,8 +181,13 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **The double jump comes back on landing or on a wall** (grabbing one or jumping off one). Chosen over landing only (Claude's recommendation). *(2026-11-16T21:13:37+00:00 — History #44)*
 
 ### Health and damage
-- **Fall damage.** With walls and magic there will be ways to avoid it. Which ways is round 1. *(2026-11-16T21:41:08+00:00 — History #51)*
-- **Health shows two ways: a bar,** so it can be read at a glance, **and the player's body deforming.** How the body deforms is round 1. *(2026-11-16T21:41:08+00:00 — History #52)*
+- **Fall damage.** With walls and magic there will be ways to avoid it. ~~Which ways is round 1.~~ See #55, #56. *(2026-11-16T21:41:08+00:00 — History #51)*
+- **Health shows two ways: a bar,** so it can be read at a glance, **and the player's body deforming.** ~~How the body deforms is round 1.~~ See #53, #54. *(2026-11-16T21:41:08+00:00 — History #52)*
+
+- **Health is a number, and damage marks the body where it came from:** a fall dents it from below, fire scorches the side that burned. Claude's recommendation, approved over the body deforming evenly and the body's cells being the health. *(2026-11-16T21:42:51+00:00 — History #53)*
+- **The deformation depends on the kind of damage:** falls and blows dent and crack the body; fire and acid eat cells away, and those cells drop into the world. Claude's recommendation, approved over dents only, chunks only and cracks only. *(2026-11-16T21:42:51+00:00 — History #54)*
+- **Fall damage is moderate:** safe up to about 6 body heights (higher than a jump plus a double jump); damage grows quickly after that, and a long fall can take most of your health but doesn't kill outright. Claude's recommendation, approved over gentle and harsh. *(2026-11-16T21:42:51+00:00 — History #55)*
+- **Besides magic, falls are broken by catching a wall** (holding or sliding resets the fall), **landing in liquid** (cushions or cancels it) **and soft materials** such as sand (soften it, less than liquid). The double jump was not chosen, so it doesn't reset a fall. *(2026-11-16T21:42:51+00:00 — History #56)*
 
 ### Platforms and input
 - **Touch: a fixed thumbstick** bottom left for moving and climbing, with **Jump** ~~and a held **Grab** button~~ bottom right (no Grab since #47). Claude's recommendation, approved over arrow buttons. *(2026-11-16T21:13:37+00:00 — History #45)*
@@ -364,6 +369,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 50 | 2026-11-16T21:37:39+00:00 | Player | No climbing: on a wall, push towards it to hold, let go to slide, push away to drop off; every jump off a wall kicks away; scale walls by jumping off and steering back (Lyra). Claude's knock-ons: climb jump and ledge pop removed, W/Up jump again, shorter kick-off (70, 0.1 s lock). Supersedes climbing in #42, #46, #47, #49. |
 | 51 | 2026-11-16T21:41:08+00:00 | Health | Fall damage, with walls and magic as ways to avoid it. |
 | 52 | 2026-11-16T21:41:08+00:00 | Health | Health shows as a bar (at a glance) and as the player's body deforming. |
+| 53 | 2026-11-16T21:42:51+00:00 | Health | Health is a number; damage marks the body where it came from (Claude's recommendation, approved). |
+| 54 | 2026-11-16T21:42:51+00:00 | Health | Deformation by kind of damage: falls and blows dent and crack; fire and acid eat cells away into the world (Claude's recommendation, approved). |
+| 55 | 2026-11-16T21:42:51+00:00 | Health | Moderate fall damage: safe to about 6 body heights, long falls take most health but don't kill outright (Claude's recommendation, approved). |
+| 56 | 2026-11-16T21:42:51+00:00 | Health | Falls are broken by walls, landing in liquid, and soft materials (and magic); not by the double jump. |
 
 ---
 

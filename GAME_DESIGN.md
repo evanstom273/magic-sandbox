@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:15:40+00:00):**
+**Where the project stands (as of 2026-11-16T22:19:12+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -163,6 +163,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Elements are learned by drawing them in:** point the catalyst at a material (or a force, such as fire's heat) and draw a sample in, and from then on it can be cast. Anything made by accident (steam, obsidian) can be drawn in too. Claude's recommendation, approved; witnessing it, making it yourself and studying samples were not chosen. *(2026-11-16T20:27:29+00:00 — History #25)*
 - **Shapes and triggers are all there from the start**, ~~a small set~~ (the shapes are the Magic Mod's eleven, #29); discovery is about elements. Claude's recommendation, approved over learning them by watching the world. *(2026-11-16T20:27:29+00:00 — History #26)*
 - **Catalysts change power, affinity, capacity and quirks** (all four picked): how strong, big or far-reaching spells are; which elements, shapes or triggers they favour; how many elements a spell can mix or how many prepared spells fit on the hotbar; and odd properties of their own. **Any spell can be cast from any catalyst; some are just better at it.** Lyra's note. *(2026-11-16T20:27:29+00:00 — History #27)*
+- **The floating hands hold the catalyst.** Not in the game yet: there are no catalysts until magic goes in. *(2026-11-16T22:19:12+00:00 — History #69)*
+- **Life is an element** (Lyra's): for healing, summoning and the like. The rest of the roster is in design now. *(2026-11-16T22:19:12+00:00 — History #70)*
 - **One catalyst at a time,** swapping between those carried. Chosen over one in each hand. *(2026-11-16T20:27:29+00:00 — History #28)*
 - **The shapes are the spell types from Lyra's Magic Mod design** (a Minecraft mod of hers): **Projectile, Beam, AoE, Rune, Self, Target, Summon, Orbit, Wave, Cone** and **Weapon enchantment**. Lyra's call, replacing the examples Claude gave. *(2026-11-16T20:30:15+00:00 — History #29)*
 - **The casting types come from the Magic Mod too:** **Instant** (one activation casts once), **Charged** (holding strengthens a spell before release), **Channeled** (holding sustains an effect), **Burst** (one activation releases several shots) and **Continuous** (holding repeatedly casts individual shots). ~~How they fit into element + shape + trigger is open.~~ Each shape allows a few (#31). *(2026-11-16T20:30:15+00:00 — History #30)*
@@ -416,6 +418,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 66 | 2026-11-16T22:06:27+00:00 | Player | Floating feet (the style guide's way), with floating hands. |
 | 67 | 2026-11-16T22:07:44+00:00 | Player | Build: No. 6 "Taller" from the Caster Line-up (round head on a longer body, about 16 cells tall with feet). |
 | 68 | 2026-11-16T22:15:40+00:00 | Player | No. 6 in the game with movement and falls kept in cells; the hitbox becomes the whole figure, 10 × 16 (Claude's plan, approved). |
+| 69 | 2026-11-16T22:19:12+00:00 | Magic | The floating hands hold the catalyst. |
+| 70 | 2026-11-16T22:19:12+00:00 | Magic | Life is an element: healing, summoning and the like (Lyra's). |
 
 ---
 

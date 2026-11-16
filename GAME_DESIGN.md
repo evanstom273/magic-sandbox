@@ -18,13 +18,13 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:21:38+00:00):**
+**Where the project stands (as of 2026-11-16T20:24:36+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
 - Top-level design from Lyra (History #7–#13).
-- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20).
+- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16); round 2 how spells are built, when, how elements mix, and that spells make real material (History #17–#20); round 3 what the elements are, mana, catalysts, and learning by experiment (History #21–#24).
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -153,6 +153,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Spells are both prepared and mixed on the fly:** a few built in a spell menu and kept ready on a hotbar, plus quick mixing in the moment. Chosen over prepared only (Claude's recommendation) and mixed on the fly only. *(2026-11-16T20:21:38+00:00 — History #18)*
 - **When a spell has more than one element, the world decides.** The elements come out together and react by the world's own rules (fire and water make steam because that's what they do), with no separate mixing table. Claude's recommendation, approved; designed mixes, elements side by side, and one element per spell were not chosen. *(2026-11-16T20:21:38+00:00 — History #19)*
 - **Spells make real material.** Where the element is a substance, the spell leaves actual stuff in the world (water that flows and pools, rock that stays, fire that spreads); things like lightning stay effects. Claude's recommendation, approved; fading material and effects only were not chosen. *(2026-11-16T20:21:38+00:00 — History #20)*
+- **Elements are substances and forces, and the substances can be any of the world's materials.** Forces (heat, cold, lightning, push, for example) act on whatever's there; substances make real material (#20), and in principle anything in the world could become castable: water, oil, sand, lava, acid, gunpowder. Lyra combined two options: substances and forces (Claude's recommendation) and any world material. Classic elements and forces only were not chosen. *(2026-11-16T20:24:36+00:00 — History #21)*
+- **Mana limits casting:** one pool that refills over time, with bigger spells costing more. Claude's recommendation, approved; per-spell recharge, drawing on the world, and mana and matter were not chosen. *(2026-11-16T20:24:36+00:00 — History #22)*
+- **The player casts with catalysts, Elden Ring style.** Lyra's own answer, over bare hands, a wand or staff, a spellbook and something worn. What a catalyst does beyond enabling casting is round 4. *(2026-11-16T20:24:36+00:00 — History #23)*
+- **New magic is discovered by experimenting**, plus **a debug/cheat menu**. Lyra added the menu. Found, crafted and learned through use were not chosen. *(2026-11-16T20:24:36+00:00 — History #24)*
 
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
@@ -176,7 +180,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic rounds 1 and 2 are done (#14–#20); round 3 is what the elements are, what limits casting, what the player casts with, and where new magic comes from. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
+**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic rounds 1–3 are done (#14–#24); round 4 is how experimenting teaches magic, and what catalysts do. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
 
 **Artifacts:** none yet.
 
@@ -199,7 +203,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
 6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
 7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
-8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); what the elements are; what limits casting; what the player casts with; where spells come from; the list of shapes and triggers; how quick mixing works on touch.
+8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); how experimenting teaches magic; what catalysts do; mana's numbers; the list of shapes and triggers; how quick mixing works on touch.
 9. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 
 ---
@@ -233,6 +237,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **The smoke test runs twice:** against the development server, and against a production build served from `/magic-sandbox/`, which is how Pages serves it, so a broken base path fails the test.
 - **Vite's 500 kB chunk-size warning is raised to 2 MB**, because Phaser alone is about 1.5 MB minified (about 425 kB gzipped) and would trip it on every build.
 - **`@playwright/test` is pinned to 1.63.0**, to match the browser installed in Claude's cloud environment. On a new machine, `npx playwright install chromium` fetches the matching browser.
+- **Elden Ring-style catalysts (#23)** are read as: a held item that lets the player cast and shapes how they cast, like Elden Ring's staffs and sacred seals, with spells kept separately on the hotbar (#18) rather than stored inside the catalyst as in Noita's wands. Flag if wrong.
+- **The debug/cheat menu (#24)** is taken to give any element, shape or trigger at will. Whether players get it in the finished game, or it's only for development, hasn't been said.
 - **The page has an empty icon** (`data:,`) so the browser doesn't ask for a missing `favicon.ico`. No icon has been designed.
 - **Vite's base path comes from the workflow.** The site is served from `/magic-sandbox/`, not the domain root, so the build gets `BASE_PATH` from Pages' own settings, and the scaffold's `vite.config` should read it (falling back to `/` locally). A custom domain later wouldn't need a code change.
 - **Pages must deploy from GitHub Actions** (Settings → Pages → Source). ~~Claude can't see the repository settings, so this is unconfirmed.~~ Confirmed by the first deploy going live.
@@ -265,6 +271,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 18 | 2026-11-16T20:21:38+00:00 | Magic | Spells are both prepared (a hotbar of ready spells) and mixed on the fly. |
 | 19 | 2026-11-16T20:21:38+00:00 | Magic | Multiple elements in a spell react by the world's own rules; no mixing table (Claude's recommendation, approved). |
 | 20 | 2026-11-16T20:21:38+00:00 | Magic | Spells make real material where the element is a substance (Claude's recommendation, approved). |
+| 21 | 2026-11-16T20:24:36+00:00 | Magic | Elements are substances and forces; the substances can be any of the world's materials (Lyra combined two options). |
+| 22 | 2026-11-16T20:24:36+00:00 | Magic | Mana limits casting (Claude's recommendation, approved). |
+| 23 | 2026-11-16T20:24:36+00:00 | Magic | The player casts with catalysts, Elden Ring style (Lyra's own answer). |
+| 24 | 2026-11-16T20:24:36+00:00 | Magic | New magic is discovered by experimenting; plus a debug/cheat menu (Lyra's addition). |
 
 ---
 

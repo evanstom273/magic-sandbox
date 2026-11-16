@@ -16,17 +16,13 @@ export const PLAYER = {
   // Extra movement (no magic).
   airJumps: 1, // double jump; comes back on landing or on a wall
   doubleJumpSpeed: 180,
-  wallSlideMax: 60, // fall speed down a wall while the input lock stops a cling (climbing down is the usual slide)
-  climbUpSpeed: 40,
-  climbDownSpeed: 60, // also the wall slide
-  wallJumpSpeedX: 95,
+  wallSlideMax: 60, // sliding down a wall: when you let go, or while pushing in before the cling catches
+  wallJumpSpeedX: 70, // a short kick away, so you can steer back to the same wall and go again
   wallJumpSpeedY: 190,
-  wallJumpLock: 0.16, // after a wall jump, input can't pull you straight back for this long
+  wallJumpLock: 0.1, // after a wall jump, input can't pull you straight back for this long
   wallJumpReach: 2, // cells: how far from a wall a wall jump still works
   clingDelay: 0.1, // push into a wall this long while falling before clinging, so brushing past doesn't grab
   wallMinRows: 8, // a wall only counts if it's beside the top 8 rows of the body; bumps lower than that are stepped over
-  climbJumpSpeed: 185, // a jump while grabbing with no direction: straight up the wall
-  ledgeHopSpeed: 150, // climbing past the top of a wall pops you up onto it
 } as const
 
 // The style guide's squash and stretch (§7.1), as a starting point.

@@ -13,7 +13,7 @@ export interface PlayerState {
   jumpHeld: boolean
   facing: 1 | -1
   airJumps: number
-  climbing: 0 | -1 | 1 // the side of the wall being held, or 0
+  onWall: 0 | -1 | 1 // the side of the wall the player is on (holding or sliding), or 0
   wallLock: number
   lockDir: -1 | 1
   clingPush: number // how long the player has been pushing into a wall while falling
@@ -21,7 +21,6 @@ export interface PlayerState {
 
 export interface PlayerInput {
   move: number // -1 to 1, left and right
-  climb: number // -1 to 1, up and down
   jump: boolean // held
 }
 
@@ -29,8 +28,6 @@ export interface StepEvents {
   jumped: boolean
   doubleJumped: boolean
   wallJumped: 0 | -1 | 1 // the side of the wall jumped off
-  climbJumped: boolean
-  ledgeHopped: boolean
   grabbed: boolean
   wallSliding: 0 | -1 | 1
   landed: number // impact strength 0–1, or -1 when there was no landing
@@ -40,7 +37,7 @@ export interface StepEvents {
 export function createPlayer(x: number, y: number): PlayerState {
   return {
     x, y, vx: 0, vy: 0, grounded: false, coyote: 0, buffer: 0, jumpHeld: false, facing: 1,
-    airJumps: PLAYER.airJumps, climbing: 0, wallLock: 0, lockDir: 1, clingPush: 0,
+    airJumps: PLAYER.airJumps, onWall: 0, wallLock: 0, lockDir: 1, clingPush: 0,
   }
 }
 
@@ -85,8 +82,7 @@ const approach = (v: number, target: number, amount: number) =>
 export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid: SolidAt): StepEvents {
   const T = PLAYER
   const ev: StepEvents = {
-    jumped: false, doubleJumped: false, wallJumped: 0, climbJumped: false, ledgeHopped: false,
-    grabbed: false, wallSliding: 0, landed: -1, skidded: false,
+    jumped: false, doubleJumped: false, wallJumped: 0, grabbed: false, wallSliding: 0, landed: -1, skidded: false,
   }
 
   // Jump input: buffered on press, so a slightly early press still counts.
@@ -98,80 +94,63 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
 
   let move = Math.max(-1, Math.min(1, input.move))
   if (s.wallLock > 0) move = s.lockDir
-  const climb = Math.max(-1, Math.min(1, input.climb))
 
-  // Auto grab: push into a wall for a moment while falling (or push up into one on the ground) to
-  // cling. The player only stays on while pushing towards the wall; letting go or pushing away drops
-  // off. No stamina.
+  // Walls: push into one for a moment while falling to catch hold. On a wall, pushing towards it
+  // holds still, letting go slides down, pushing away drops off. No climbing: to scale a wall,
+  // jump off it and steer back. No stamina.
   const touching = wallNear(solid, s, 1)
   const pushing = move === 0 ? 0 : move > 0 ? 1 : -1
-  const pushingWhileFalling = !s.grounded && s.vy > 0 && touching !== 0 && pushing === touching
-  s.clingPush = pushingWhileFalling ? s.clingPush + dt : 0
-  if (s.climbing !== 0) {
-    if (touching !== s.climbing || pushing !== s.climbing) s.climbing = 0
-  } else if (touching !== 0 && s.wallLock <= 0) {
-    const fromAir = s.clingPush >= T.clingDelay
-    const fromGround = s.grounded && climb < 0 && pushing === touching
-    if (fromAir || fromGround) {
-      s.climbing = touching
-      s.airJumps = T.airJumps
-      ev.grabbed = true
-    }
+  s.clingPush = !s.grounded && s.vy > 0 && touching !== 0 && pushing === touching ? s.clingPush + dt : 0
+  if (s.onWall !== 0) {
+    if (touching !== s.onWall || pushing === -s.onWall || s.grounded) s.onWall = 0
+  } else if (touching !== 0 && s.wallLock <= 0 && s.clingPush >= T.clingDelay) {
+    s.onWall = touching
+    s.airJumps = T.airJumps
+    ev.grabbed = true
   }
 
-  if (s.climbing !== 0) {
-    const side = s.climbing
-    s.facing = side
-    s.vx = 0
-    s.vy = climb < 0 ? -T.climbUpSpeed * -climb : climb > 0 ? T.climbDownSpeed * climb : 0
-    if (climb > 0) ev.wallSliding = side // climbing down is the wall slide
-
-    // Climbed past the top of the wall: pop up onto it.
-    if (climb < 0 && !wallBeside(solid, s, side, 1, 0, Math.floor(PLAYER.size / 2))) {
-      s.vy = -T.ledgeHopSpeed
-      s.vx = side * 45
-      s.climbing = 0
-      ev.ledgeHopped = true
-    } else if (s.buffer > 0) {
-      // Still pushing into the wall, so a jump hops straight up it. (Letting go first makes it a wall jump.)
-      s.buffer = 0
-      s.vy = -T.climbJumpSpeed
-      ev.climbJumped = true
-      s.climbing = 0
-    }
-  } else {
-    // Walking.
+  // Walking (or steering in the air).
+  if (s.onWall === 0) {
     if (move !== 0) s.facing = move > 0 ? 1 : -1
     if (s.grounded && move !== 0 && Math.sign(move) !== Math.sign(s.vx) && Math.abs(s.vx) > T.walkSpeed * 0.6) ev.skidded = true
     const accel = s.grounded ? (move !== 0 ? T.groundAccel : T.groundDecel) : T.airAccel
     s.vx = approach(s.vx, move * T.walkSpeed, accel * dt)
+  } else {
+    s.facing = s.onWall
+    s.vx = 0
+  }
 
-    // Jumps: from the ground, then off a wall, then in the air.
-    if (s.buffer > 0) {
-      const wall = s.grounded ? 0 : wallNear(solid, s, T.wallJumpReach)
-      if (s.grounded || s.coyote > 0) {
-        s.vy = -T.jumpSpeed
-        s.grounded = false
-        s.coyote = 0
-        s.buffer = 0
-        ev.jumped = true
-      } else if (wall !== 0) {
-        s.buffer = 0
-        wallJump(s, wall, ev)
-      } else if (pressed && s.airJumps > 0) {
-        s.airJumps--
-        s.vy = -T.doubleJumpSpeed
-        s.buffer = 0
-        ev.doubleJumped = true
-      }
+  // Jumps: from the ground, then off a wall (always a kick away), then in the air.
+  if (s.buffer > 0) {
+    const wall = s.onWall !== 0 ? s.onWall : s.grounded ? 0 : wallNear(solid, s, T.wallJumpReach)
+    if (s.grounded || s.coyote > 0) {
+      s.vy = -T.jumpSpeed
+      s.grounded = false
+      s.coyote = 0
+      s.buffer = 0
+      ev.jumped = true
+    } else if (wall !== 0) {
+      s.buffer = 0
+      s.onWall = 0
+      wallJump(s, wall, ev)
+    } else if (pressed && s.airJumps > 0) {
+      s.airJumps--
+      s.vy = -T.doubleJumpSpeed
+      s.buffer = 0
+      ev.doubleJumped = true
     }
   }
 
-  if (!input.jump && s.vy < -T.jumpSpeed * T.jumpCut && !ev.ledgeHopped) s.vy = Math.max(s.vy, -T.jumpSpeed * T.jumpCut)
-  if (s.climbing === 0) s.vy = Math.min(T.maxFall, s.vy + T.gravity * dt)
+  if (!input.jump && s.vy < -T.jumpSpeed * T.jumpCut) s.vy = -T.jumpSpeed * T.jumpCut
+  s.vy = Math.min(T.maxFall, s.vy + T.gravity * dt)
 
-  // Sliding down a wall you're pushing into.
-  if (s.climbing === 0 && !s.grounded && s.vy > 0 && touching !== 0 && touching === move) {
+  // On a wall: hold still while pushing towards it, slide down when let go. Pushing into a wall
+  // before the hold catches also slides.
+  if (s.onWall !== 0) {
+    if (pushing === s.onWall) s.vy = Math.min(0, s.vy)
+    else s.vy = Math.min(s.vy, T.wallSlideMax)
+    if (s.vy > 0) ev.wallSliding = s.onWall
+  } else if (!s.grounded && s.vy > 0 && touching !== 0 && touching === pushing) {
     s.vy = Math.min(s.vy, T.wallSlideMax)
     s.facing = touching
     ev.wallSliding = touching
@@ -186,7 +165,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     else {
       // Step up small bumps on the ground, and while coming down, so bumpy ground doesn't catch.
       let climbed = false
-      if (s.grounded || (s.vy >= 0 && s.climbing === 0)) {
+      if (s.grounded || (s.vy >= 0 && s.onWall === 0)) {
         for (let u = 1; u <= T.stepUp; u++) {
           if (!boxHits(solid, nx, s.y - u)) { s.x = nx; s.y -= u; climbed = true; break }
         }
@@ -224,7 +203,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   }
 
   // Walking down small bumps keeps the player on the ground instead of hopping off each one.
-  if (wasGrounded && !s.grounded && s.vy >= 0 && s.climbing === 0) {
+  if (wasGrounded && !s.grounded && s.vy >= 0 && s.onWall === 0) {
     let y = s.y
     for (let d = 0; d <= T.stepUp; d++) {
       if (boxHits(solid, s.x, y + 0.5)) { s.y = y; s.grounded = true; s.vy = 0; break }
@@ -232,7 +211,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     }
   }
   if (!s.grounded && s.vy >= 0 && boxHits(solid, s.x, s.y + 0.5)) s.grounded = true
-  if (s.climbing !== 0 && s.grounded && climb >= 0) s.climbing = 0 // climbed down to the floor
+  if (s.onWall !== 0 && s.grounded) s.onWall = 0 // slid down to the floor
 
   if (s.grounded) s.airJumps = T.airJumps
   if (s.grounded && !wasGrounded && fallSpeed > 80) ev.landed = Math.min(1, (fallSpeed - 80) / 280)

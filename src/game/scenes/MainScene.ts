@@ -42,7 +42,7 @@ export class MainScene extends Phaser.Scene {
     this.gfx = this.add.graphics()
     this.player = createPlayer(SPAWN.x, SPAWN.y)
     this.body = CellBody.square(PLAYER.size)
-    this.keys = this.input.keyboard!.addKeys('A,D,W,S,LEFT,RIGHT,UP,DOWN,SPACE,K') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K') as Record<string, Phaser.Input.Keyboard.Key>
 
     this.cameras.main.setBounds(0, 0, ROOM_W, ROOM_H)
     this.fitCamera()
@@ -65,20 +65,16 @@ export class MainScene extends Phaser.Scene {
   private readInput() {
     const k = this.keys
     let move = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0) || touchInput.moveX
-    let climb = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0) || touchInput.moveY
-    let jump = k.SPACE.isDown || k.K.isDown || touchInput.jump
+    let jump = k.SPACE.isDown || k.K.isDown || k.W.isDown || k.UP.isDown || touchInput.jump
     const pad = this.input.gamepad?.pad1
     if (pad) {
-      const { x, y } = pad.leftStick
+      const x = pad.leftStick.x
       if (Math.abs(x) > 0.3) move = x
-      if (Math.abs(y) > 0.4) climb = y
       if (pad.left) move = -1
       if (pad.right) move = 1
-      if (pad.up) climb = -1
-      if (pad.down) climb = 1
       if (pad.A) jump = true
     }
-    return { move, climb, jump }
+    return { move, jump }
   }
 
   update(_time: number, deltaMs: number): void {
@@ -88,7 +84,6 @@ export class MainScene extends Phaser.Scene {
 
     if (ev.jumped) { this.squash.jump(); this.dust.puff(p.x, p.y, 6, 30) }
     if (ev.doubleJumped) { this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1]); this.rings.add(p.x, p.y, 3, 34, 0.28) }
-    if (ev.climbJumped || ev.ledgeHopped) this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1])
     if (ev.wallJumped) {
       this.squash.jump()
       this.dust.puff(p.x + ev.wallJumped * (PLAYER.size / 2), p.y - PLAYER.size / 2, 5, 25, ev.wallJumped === 1 ? -1 : 1)

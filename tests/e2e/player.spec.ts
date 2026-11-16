@@ -38,7 +38,7 @@ test('the thumbstick and Jump button work on a phone-sized screen', async ({ bro
   const page = await context.newPage()
   await ready(page, 'http://localhost:5173/?touch=1')
   const start = await player(page)
-  const stick = (await page.getByRole('slider', { name: 'Move and climb' }).boundingBox())!
+  const stick = (await page.getByRole('slider', { name: 'Move' }).boundingBox())!
   const cx = stick.x + stick.width / 2, cy = stick.y + stick.height / 2
   await page.mouse.move(cx, cy)
   await page.mouse.down()

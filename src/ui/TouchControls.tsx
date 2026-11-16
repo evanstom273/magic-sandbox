@@ -41,7 +41,7 @@ function HoldButton({ k, label, children }: { k: 'jump'; label: string; children
 
 const RADIUS = 52
 
-// A fixed thumbstick: drag from its centre to move and climb.
+// A fixed thumbstick: drag from its centre to move.
 function Thumbstick() {
   const [knob, setKnob] = useState({ x: 0, y: 0 })
   const centre = useRef({ x: 0, y: 0 })
@@ -52,21 +52,19 @@ function Thumbstick() {
     const d = Math.hypot(dx, dy)
     if (d > RADIUS) { dx = (dx / d) * RADIUS; dy = (dy / d) * RADIUS }
     setKnob({ x: dx, y: dy })
-    const nx = dx / RADIUS, ny = dy / RADIUS
+    const nx = dx / RADIUS
     touchInput.moveX = Math.abs(nx) > 0.3 ? nx : 0
-    touchInput.moveY = Math.abs(ny) > 0.4 ? ny : 0
   }
   const end = () => {
     active.current = null
     setKnob({ x: 0, y: 0 })
     touchInput.moveX = 0
-    touchInput.moveY = 0
   }
 
   return (
     <div
       role="slider"
-      aria-label="Move and climb"
+      aria-label="Move"
       aria-valuenow={Math.round((knob.x / RADIUS) * 100)}
       className="pointer-events-auto relative h-36 w-36 touch-none select-none rounded-full border border-white/15 bg-white/5"
       onPointerDown={(e) => {

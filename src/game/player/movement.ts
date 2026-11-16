@@ -115,7 +115,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     dy -= st
   }
 
-  // Walking down small bumps keeps him on the ground instead of hopping off each one.
+  // Walking down small bumps keeps the player on the ground instead of hopping off each one.
   if (wasGrounded && !s.grounded && s.vy >= 0) {
     let y = s.y
     for (let d = 0; d <= T.stepUp; d++) {

@@ -51,7 +51,7 @@ describe('player movement', () => {
     const ledge = (x: number, y: number) => (y >= 100 && x < 60) || y >= 200
     const s = createPlayer(50, 100)
     run(s, idle, 0.1, ledge)
-    // Walk until he's just left the ledge, then jump.
+    // Walk until the player has just left the ledge, then jump.
     while (s.grounded) stepPlayer(s, { move: 1, jump: false }, DT, ledge)
     const ev = stepPlayer(s, { move: 1, jump: true }, DT, ledge)
     expect(ev.jumped).toBe(true)

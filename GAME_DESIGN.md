@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:20:16+00:00):**
+**Where the project stands (as of 2026-11-16T22:22:18+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -171,6 +171,10 @@ Don't rush through the questions simply to get to implementation. The design pro
   - **Solids and powders:** **Sand**, **Stone**, **Gunpowder**, **Metal**.
   - **Made by reactions, so in the world and drawable without being picked:** steam, smoke, fire, ice, obsidian, glass, rubble, molten metal, and plants and wood (Life's doing).
   Each is both something to cast and something in the world that reacts. The descriptions offered with them (heat burns, melts and boils; cold freezes and condenses; lightning arcs along water and metal; force shoves and breaks; decay withers, rots and poisons; light lights, scorches and blinds; gravity pulls and lifts; void deletes or moves cells; water flows, conducts, freezes, boils and breaks falls; oil floats and burns long; lava ignites and cools to rock or obsidian; acid eats solids and bodies but not obsidian or glass; sand piles, cushions and melts to glass; stone builds and breaks to rubble; gunpowder explodes; metal conducts and melts) are Claude's, a starting point for the reactions. *(2026-11-16T22:20:16+00:00 — History #71)*
+- **Life heals anything living it touches:** you, allies and enemies alike, mending their marks; a Life cone over a fight heals the monsters too. Claude's recommendation, approved over healing only the caster and healing all but enemies. *(2026-11-16T22:22:18+00:00 — History #72)*
+- **Life summons all four ways:** **plants** (vines up walls, roots into bridges and platforms, moss that softens a landing), **little creatures** (small allies made of cells that help for a while, then wither), **elemental creatures** (Life mixed with another element animates it: with Heat a fire sprite, with Water a water spirit, with Stone a little golem; the world decides what they're like), and **life in what's there** (waking material already in the world: a mound of sand shambles off, a puddle crawls). *(2026-11-16T22:22:18+00:00 — History #73)*
+- **Life in the world:** **plants grow and spread** on their own where there's soil, water and light (fire burns them, decay rots them); **everything alive carries Life** (drawing it in from a creature drains it a little); and rare **Life springs**, glowing pools or blossoms of pure Life. *(2026-11-16T22:22:18+00:00 — History #74)*
+- **Life costs just mana,** like every other element. Claude's recommendation, approved over drawing from nearby life and costing health. *(2026-11-16T22:22:18+00:00 — History #75)*
 - **One catalyst at a time,** swapping between those carried. Chosen over one in each hand. *(2026-11-16T20:27:29+00:00 — History #28)*
 - **The shapes are the spell types from Lyra's Magic Mod design** (a Minecraft mod of hers): **Projectile, Beam, AoE, Rune, Self, Target, Summon, Orbit, Wave, Cone** and **Weapon enchantment**. Lyra's call, replacing the examples Claude gave. *(2026-11-16T20:30:15+00:00 — History #29)*
 - **The casting types come from the Magic Mod too:** **Instant** (one activation casts once), **Charged** (holding strengthens a spell before release), **Channeled** (holding sustains an effect), **Burst** (one activation releases several shots) and **Continuous** (holding repeatedly casts individual shots). ~~How they fit into element + shape + trigger is open.~~ Each shape allows a few (#31). *(2026-11-16T20:30:15+00:00 — History #30)*
@@ -427,6 +431,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 69 | 2026-11-16T22:19:12+00:00 | Magic | The floating hands hold the catalyst. |
 | 70 | 2026-11-16T22:19:12+00:00 | Magic | Life is an element: healing, summoning and the like (Lyra's). |
 | 71 | 2026-11-16T22:20:16+00:00 | Magic | Element roster: forces Life, Heat, Cold, Lightning, Force, Decay, Light, Gravity, Void; liquids Water, Oil, Lava, Acid; solids Sand, Stone, Gunpowder, Metal; plus what reactions make (steam, smoke, fire, ice, obsidian, glass, rubble, molten metal, plants and wood). |
+| 72 | 2026-11-16T22:22:18+00:00 | Magic | Life heals anything living it touches, enemies included (Claude's recommendation, approved). |
+| 73 | 2026-11-16T22:22:18+00:00 | Magic | Life summons plants, little creatures, elemental creatures (Life plus another element) and life in what's there. |
+| 74 | 2026-11-16T22:22:18+00:00 | Magic | Life in the world: plants grow and spread; everything alive carries it; rare Life springs. |
+| 75 | 2026-11-16T22:22:18+00:00 | Magic | Life costs just mana (Claude's recommendation, approved). |
 
 ---
 

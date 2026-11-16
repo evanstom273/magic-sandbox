@@ -97,3 +97,49 @@ test('dummies react to the new shapes: a Cold Target freezes one', async ({ page
   }
   expect(frozen, `dummy at ${at.x},${at.y}`).toBe(true)
 })
+
+test('on a phone, the move stick, Jump and the hotbar move, jump and pick without casting', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 412, height: 915 }, hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  await page.goto('http://localhost:5173/?touch=1')
+  await page.waitForFunction(() => typeof (window as unknown as { __magic?: unknown }).__magic === 'function')
+  const magic = () => page.evaluate(() => (window as unknown as { __magic: () => { mana: number; projectiles: number } }).__magic())
+  const player = () => page.evaluate(() => (window as unknown as { __player: () => { x: number } }).__player())
+  const before = await water(page)
+  const startX = (await player()).x
+  const cdp = await context.newCDPSession(page)
+  const stick = (await page.getByRole('slider', { name: 'Move' }).boundingBox())!
+  const sx = stick.x + stick.width / 2, sy = stick.y + stick.height / 2
+  // Hold the move stick to the right: the player walks, and nothing is cast.
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: sx, y: sy }] })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: sx + 45, y: sy }] })
+  await page.waitForTimeout(500)
+  expect((await magic()).projectiles).toBe(0)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  expect((await player()).x).toBeGreaterThan(startX + 8)
+  // Tap Jump and a hotbar slot: still nothing cast.
+  const jump = (await page.getByRole('button', { name: 'Jump' }).boundingBox())!
+  await page.touchscreen.tap(jump.x + jump.width / 2, jump.y + jump.height / 2)
+  const slot = (await page.getByRole('button', { name: /Spell 1/ }).boundingBox())!
+  await page.touchscreen.tap(slot.x + slot.width / 2, slot.y + slot.height / 2)
+  await page.waitForTimeout(500)
+  expect((await magic()).mana).toBe(100)
+  expect(await water(page)).toBe(before)
+  await context.close()
+})
+
+test('on desktop, clicking the hotbar or the Spells button doesn\'t cast', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __magic?: unknown }).__magic === 'function')
+  // Press and hold on a hotbar slot, then on the Spells button: long enough that a press on the world would cast.
+  for (const name of [/Spell 1/, /^Spells$/]) {
+    const box = (await page.getByRole('button', { name }).boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.waitForTimeout(300)
+    await page.mouse.up()
+    await page.keyboard.press('Escape') // in case it opened the builder
+  }
+  await page.waitForTimeout(200)
+  expect(await page.evaluate(() => (window as unknown as { __magic: () => { mana: number } }).__magic().mana)).toBe(100)
+})

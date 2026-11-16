@@ -82,7 +82,7 @@ export class MainScene extends Phaser.Scene {
     this.input.mouse?.disableContextMenu()
     // A tap on the world shorter than a frame still casts: latch where it landed until the next update.
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-      if (!ptr.wasTouch) return
+      if (!ptr.wasTouch || !this.onWorld(ptr)) return
       const wp = ptr.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
       this.tapLatch = { x: wp.x, y: wp.y }
     })
@@ -279,7 +279,7 @@ export class MainScene extends Phaser.Scene {
     const centreY = p.y - PLAYER.height * 0.6
     const pointer = this.input.activePointer
     let down = false
-    const finger = this.input.manager.pointers.find((ptr) => ptr.wasTouch && ptr.isDown)
+    const finger = this.input.manager.pointers.find((ptr) => ptr.wasTouch && ptr.isDown && this.onWorld(ptr))
     if (finger) {
       this.aimSource = 'touch'
       const wp = finger.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
@@ -299,7 +299,7 @@ export class MainScene extends Phaser.Scene {
       this.aimAt(wp.x, wp.y, centreY)
       this.lastPointer = { x: pointer.x, y: pointer.y }
     }
-    if (this.aimSource === 'mouse' && !pointer.wasTouch && pointer.leftButtonDown()) down = true
+    if (this.aimSource === 'mouse' && !pointer.wasTouch && pointer.leftButtonDown() && this.onWorld(pointer)) down = true
     if (pad && pad.R2 > 0.5) down = true
     this.tapLatch = null
 
@@ -324,6 +324,14 @@ export class MainScene extends Phaser.Scene {
   private builderKey = false
   private wasOpen = false
   private selectHeld = false
+
+  /**
+   * Did this touch or click start on the world itself? Phaser also reports presses that start on the
+   * controls over it (the move stick, Jump, the hotbar, the Spells button); those mustn't cast.
+   */
+  private onWorld(ptr: Phaser.Input.Pointer): boolean {
+    return ptr.downElement === this.game.canvas
+  }
 
   private aimAt(x: number, y: number, centreY: number): void {
     const dx = x - this.player.x, dy = y - centreY, m = Math.hypot(dx, dy) || 1

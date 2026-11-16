@@ -9,3 +9,8 @@ body,
   /* Placeholder backdrop from the reference sheets, until the game has a palette. */
   background: #14141c;
 }
+
+/* The canvas is sized in CSS pixels; scale it up without blurring the cells on high-density screens. */
+canvas {
+  image-rendering: pixelated;
+}

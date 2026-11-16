@@ -1,11 +1,12 @@
 import { PhaserGame } from './game/PhaserGame.tsx'
+import { TouchControls } from './ui/TouchControls.tsx'
 
-// The React shell. Phaser runs the game inside PhaserGame; anything React draws
-// around it later (menus, overlays, HUD) goes here.
+// The React shell. Phaser runs the game inside PhaserGame; React draws what sits on top of it.
 export default function App() {
   return (
-    <main className="relative h-dvh w-full overflow-hidden">
+    <main className="relative h-dvh w-full touch-none overflow-hidden select-none">
       <PhaserGame />
+      <TouchControls />
     </main>
   )
 }

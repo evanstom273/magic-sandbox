@@ -7,12 +7,15 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     type: Phaser.AUTO,
     parent,
     backgroundColor: BACKDROP,
+    // Cells stay crisp blocks when scaled up.
+    pixelArt: true,
     scale: {
       // The canvas fills its parent and follows it when the window changes size.
       mode: Phaser.Scale.RESIZE,
       width: '100%',
       height: '100%',
     },
+    input: { gamepad: true },
     scene: [MainScene],
   })
 }

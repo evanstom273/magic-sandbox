@@ -81,8 +81,16 @@ function wallNear(solid: SolidAt, s: PlayerState, reach: number): 0 | -1 | 1 {
 const approach = (v: number, target: number, amount: number) =>
   v < target ? Math.min(target, v + amount) : Math.max(target, v - amount)
 
-export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid: SolidAt): StepEvents {
+/** What the world around the player is like this step (from the scene). */
+export interface Surroundings {
+  submerged: number // 0–1: how much of the body is in liquid
+}
+
+export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid: SolidAt, env: Surroundings = { submerged: 0 }): StepEvents {
   const T = PLAYER
+  const swimming = env.submerged > 0.35
+  // Buried by falling sand or rubble: pushed up out of it.
+  for (let i = 0; i < 6 && boxHits(solid, s.x, s.y); i++) s.y -= 1
   const ev: StepEvents = {
     jumped: false, doubleJumped: false, wallJumped: 0, grabbed: false, wallSliding: 0, landed: -1, fell: 0, skidded: false,
   }
@@ -116,7 +124,7 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
     if (move !== 0) s.facing = move > 0 ? 1 : -1
     if (s.grounded && move !== 0 && Math.sign(move) !== Math.sign(s.vx) && Math.abs(s.vx) > T.walkSpeed * 0.6) ev.skidded = true
     const accel = s.grounded ? (move !== 0 ? T.groundAccel : T.groundDecel) : T.airAccel
-    s.vx = approach(s.vx, move * T.walkSpeed, accel * dt)
+    s.vx = approach(s.vx, move * T.walkSpeed * (swimming ? 0.6 : 1), accel * dt)
   } else {
     s.facing = s.onWall
     s.vx = 0
@@ -125,7 +133,11 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   // Jumps: from the ground, then off a wall (always a kick away), then in the air.
   if (s.buffer > 0) {
     const wall = s.onWall !== 0 ? s.onWall : s.grounded ? 0 : wallNear(solid, s, T.wallJumpReach)
-    if (s.grounded || s.coyote > 0) {
+    if (swimming && pressed) {
+      // Swimming: every press is a stroke upwards.
+      s.vy = -T.swimStroke
+      s.buffer = 0
+    } else if (s.grounded || s.coyote > 0) {
       s.vy = -T.jumpSpeed
       s.grounded = false
       s.coyote = 0
@@ -144,7 +156,8 @@ export function stepPlayer(s: PlayerState, input: PlayerInput, dt: number, solid
   }
 
   if (!input.jump && s.vy < -T.jumpSpeed * T.jumpCut) s.vy = -T.jumpSpeed * T.jumpCut
-  s.vy = Math.min(T.maxFall, s.vy + T.gravity * dt)
+  s.vy = Math.min(swimming ? T.swimSink : T.maxFall, s.vy + T.gravity * (swimming ? 0.25 : 1) * dt)
+  if (swimming) { s.fallDist = 0; s.airJumps = T.airJumps } // water breaks a fall
 
   // On a wall: hold still while pushing towards it, slide down when let go. Pushing into a wall
   // before the hold catches also slides.

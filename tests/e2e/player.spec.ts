@@ -60,7 +60,7 @@ test('a long fall hurts, dents the body and shows on the bar; the rest spot heal
   await ready(page)
   const bar = page.getByRole('meter', { name: 'Health' })
   await expect(bar).toHaveAttribute('aria-valuenow', '100')
-  await page.evaluate(() => (window as unknown as { __teleport: (x: number, y: number) => void }).__teleport(225, 30))
+  await page.evaluate(() => (window as unknown as { __teleport: (x: number, y: number) => void }).__teleport(303, 30))
   await expect.poll(async () => (await player(page)).health, { timeout: 4000 }).toBeLessThan(100)
   const hurt = await player(page)
   expect(hurt.health).toBeGreaterThan(0)

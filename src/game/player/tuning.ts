@@ -25,6 +25,8 @@ export const PLAYER = {
   wallJumpLock: 0.1, // after a wall jump, input can't pull you straight back for this long
   wallJumpReach: 2, // cells: how far from a wall a wall jump still works
   clingDelay: 0.1, // push into a wall this long while falling before clinging, so brushing past doesn't grab
+  swimStroke: 95, // each jump press in water
+  swimSink: 40, // the most you sink at in water
   wallMinRows: 12, // a wall only counts if it's beside the top 12 rows of the figure; bumps of up to 4 cells never count
 } as const
 

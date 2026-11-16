@@ -11,7 +11,8 @@ import { createPlayer, stepPlayer, type PlayerState } from '../player/movement.t
 import { Squash } from '../player/squash.ts'
 import { PLAYER, SQUASH } from '../player/tuning.ts'
 import { DAMAGE, DUST, FOOT, HERO, INK } from '../style/tokens.ts'
-import type { CellGrid } from '../world/grid.ts'
+import { Material, type CellGrid } from '../world/grid.ts'
+import { step as simulate, STEPS_PER_SECOND } from '../world/simulate.ts'
 import { buildTestRoom, REST_SPOT, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
 import { paintGrid } from '../world/worldTexture.ts'
 
@@ -20,6 +21,9 @@ const BODY_COLOURS: Record<number, number> = { [BodyCell.INK]: INK, [BodyCell.HE
 
 export class MainScene extends Phaser.Scene {
   private grid!: CellGrid
+  private worldTex!: Phaser.Textures.CanvasTexture
+  private worldImg!: ImageData
+  private simAcc = 0
   private player!: PlayerState
   private body!: CellBody
   private face: Face = 'open'
@@ -51,12 +55,9 @@ export class MainScene extends Phaser.Scene {
 
   create(): void {
     this.grid = buildTestRoom()
-    const tex = this.textures.createCanvas('world', ROOM_W, ROOM_H)!
-    const ctx = tex.getContext()
-    const img = ctx.createImageData(ROOM_W, ROOM_H)
-    paintGrid(this.grid, img)
-    ctx.putImageData(img, 0, 0)
-    tex.refresh()
+    this.worldTex = this.textures.createCanvas('world', ROOM_W, ROOM_H)!
+    this.worldImg = this.worldTex.getContext().createImageData(ROOM_W, ROOM_H)
+    this.paintWorld()
     this.add.image(0, 0, 'world').setOrigin(0, 0)
 
     this.gfx = this.add.graphics()
@@ -80,6 +81,8 @@ export class MainScene extends Phaser.Scene {
         health: this.health.value, marks: this.health.marks.length, mode: this.mode, shards: this.shatter.shards.length,
       })
       w.__hurt = (n: number) => this.hurt(n, 0.5)
+      w.__world = () => this.grid
+      w.__Material = Material
       w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
   }
@@ -118,6 +121,10 @@ export class MainScene extends Phaser.Scene {
     const jumpPressed = input.jump && !this.jumpWasDown
     this.jumpWasDown = input.jump
     this.shatter.update(dt, this.grid.isSolid)
+    // The world simulation runs at a fixed rate, whatever the frame rate.
+    this.simAcc += dt * STEPS_PER_SECOND
+    for (let n = 0; this.simAcc >= 1 && n < 4; n++, this.simAcc--) simulate(this.grid)
+    if (this.simAcc > 4) this.simAcc = 0
 
     if (this.mode !== 'alive') {
       if (this.mode === 'dying' && this.modeTime > 1.1) this.setMode('dead')
@@ -139,7 +146,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     const p = this.player
-    const ev = stepPlayer(p, input, dt, this.grid.isSolid)
+    const ev = stepPlayer(p, input, dt, this.grid.isSolid, { submerged: this.submerged() })
 
     if (ev.jumped) { this.squash.jump(); this.dust.puff(p.x, p.y, 6, 30) }
     if (ev.doubleJumped) { this.squash.set(SQUASH.doubleJump[0], SQUASH.doubleJump[1]); this.rings.add(p.x, p.y, 3, 34, 0.28) }
@@ -154,7 +161,10 @@ export class MainScene extends Phaser.Scene {
       this.dust.puff(p.x + ev.wallSliding * (PLAYER.width / 2), p.y - PLAYER.height * 0.6, 1, 8, ev.wallSliding === 1 ? -1 : 1)
     }
     if (ev.landed >= 0) { this.squash.land(ev.landed); this.dust.puff(p.x, p.y, 4 + Math.round(ev.landed * 8), 25 + ev.landed * 45) }
-    const damage = fallDamage(ev.fell)
+    // Landing on something soft (sand, rubble, ash) halves the damage.
+    const under = this.grid.get(Math.floor(p.x), Math.floor(p.y))
+    const soft = under === Material.SAND || under === Material.RUBBLE || under === Material.ASH
+    const damage = Math.round(fallDamage(ev.fell) * (soft ? 0.5 : 1))
     if (damage > 0) this.hurt(damage, 0.25 + Math.random() * 0.5)
     if (this.mode !== 'alive') return
     // Stand-in rest spot: heals while standing on it.
@@ -172,6 +182,25 @@ export class MainScene extends Phaser.Scene {
 
     this.followCamera(dt)
     this.draw()
+  }
+
+  /** How much of the player's body is in liquid, 0–1. */
+  private submerged(): number {
+    const p = this.player
+    let wet = 0, all = 0
+    for (let y = Math.floor(p.y - PLAYER.height); y < p.y; y += 2) {
+      for (let x = Math.floor(p.x - PLAYER.width / 2); x < p.x + PLAYER.width / 2; x += 2) {
+        all++
+        if (this.grid.get(x, y) === Material.WATER) wet++
+      }
+    }
+    return all ? wet / all : 0
+  }
+
+  private paintWorld(): void {
+    paintGrid(this.grid, this.worldImg)
+    this.worldTex.getContext().putImageData(this.worldImg, 0, 0)
+    this.worldTex.refresh()
   }
 
   private followCamera(dt: number): void {
@@ -280,6 +309,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private draw(): void {
+    this.paintWorld()
     const g = this.gfx
     g.clear()
 

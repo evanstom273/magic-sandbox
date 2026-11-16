@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T21:37:39+00:00):**
+**Where the project stands (as of 2026-11-16T21:41:08+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -180,6 +180,10 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **No stamina limit** on ~~clinging and climbing~~ holding onto walls. Chosen over Celeste-style stamina (Claude's recommendation). *(2026-11-16T21:13:37+00:00 — History #43)*
 - **The double jump comes back on landing or on a wall** (grabbing one or jumping off one). Chosen over landing only (Claude's recommendation). *(2026-11-16T21:13:37+00:00 — History #44)*
 
+### Health and damage
+- **Fall damage.** With walls and magic there will be ways to avoid it. Which ways is round 1. *(2026-11-16T21:41:08+00:00 — History #51)*
+- **Health shows two ways: a bar,** so it can be read at a glance, **and the player's body deforming.** How the body deforms is round 1. *(2026-11-16T21:41:08+00:00 — History #52)*
+
 ### Platforms and input
 - **Touch: a fixed thumbstick** bottom left for moving and climbing, with **Jump** ~~and a held **Grab** button~~ bottom right (no Grab since #47). Claude's recommendation, approved over arrow buttons. *(2026-11-16T21:13:37+00:00 — History #45)*
 - **Keyboard and gamepad:** A/D or Left/Right to move; ~~W/S or Up/Down to climb~~ (no climbing since #50); **Space or K to jump** ~~(W and Up no longer jump)~~ (W and Up jump again since #50); ~~**Shift or J to grab**~~. Gamepad: left stick or d-pad, A to jump~~, RB or RT to grab~~ (no grab since #47). Part of Claude's plan, approved. *(2026-11-16T21:13:37+00:00 — History #46)*
@@ -243,7 +247,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
 9. ~~**Cell size.**~~ Fine (#34). Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 10. **Weapons** (#33): what they are, how they sit beside magic (which was picked as the main way to fight in #14's options), and how they're got.
-11. **What losing body cells means** (#38): for the player and for everything else, once the world can burn or dissolve them. Health, damage and death aren't designed.
+11. **What losing body cells means** (#38): for the player and for everything else, once the world can burn or dissolve them. In design now: health shows as a bar and as the body deforming (#52); how much health there is, healing and death are still open.
 
 ---
 
@@ -358,6 +362,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 48 | 2026-11-16T21:30:13+00:00 | Player | After Lyra's playtest (too sticky; caught on floor bumps): only walls beside the upper body count, a 0.1 s cling delay while falling, and stepping up bumps while coming down. |
 | 49 | 2026-11-16T21:32:47+00:00 | Player | Only stay on a wall while pushing towards it; letting go drops off; a jump pushing in is the climb jump, a neutral jump is a wall jump. Supersedes "stays without holding anything" in #47 (Claude's detail, not Lyra's). |
 | 50 | 2026-11-16T21:37:39+00:00 | Player | No climbing: on a wall, push towards it to hold, let go to slide, push away to drop off; every jump off a wall kicks away; scale walls by jumping off and steering back (Lyra). Claude's knock-ons: climb jump and ledge pop removed, W/Up jump again, shorter kick-off (70, 0.1 s lock). Supersedes climbing in #42, #46, #47, #49. |
+| 51 | 2026-11-16T21:41:08+00:00 | Health | Fall damage, with walls and magic as ways to avoid it. |
+| 52 | 2026-11-16T21:41:08+00:00 | Health | Health shows as a bar (at a glance) and as the player's body deforming. |
 
 ---
 

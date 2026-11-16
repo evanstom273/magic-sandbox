@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T21:59:05+00:00):**
+**Where the project stands (as of 2026-11-16T22:00:54+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -318,6 +318,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **The touch controls** show on touch screens (or with `?touch=1` in the address; `?touch=0` hides them). ~~Hold buttons in the bottom corners~~ A thumbstick, Grab and Jump since #45. Platforms and input are otherwise still open (§E).
 - **Wall and double-jump values** are Claude's, to tune in play: double jump 180 cells a second (a little under the ground jump's 200); wall slide capped at 60; wall jump 70 out and 190 up, locking input for 0.1 s (#50). ~~Climbing, the climb jump and the ledge pop~~ are gone (#50). The thumbstick ignores nudges under 30% across.
 - **The double jump's ring** is in the guide's pale dust colour rather than power blue, since this movement isn't magic. A small squash when grabbing a wall (0.9 × 1.08) and the double jump's stretch on climb jumps and ledge pops are Claude's additions.
+- **Jump presses are latched:** a press of Jump (keyboard or the touch button) counts even if it's released before the next frame, so a very quick tap is never lost. Found when a browser test's quick tap on the death screen was missed. *(2026-11-16T22:00:54+00:00)*
 - **Testing hooks:** in development the page exposes `window.__player()`, `window.__teleport(x, y)` and `window.__hurt(n)` for the browser tests; they're left out of production builds.
 - **Death's details are Claude's:** the slow motion (0.3× for half a second), the burst's speed, the pieces staying where they fell until the next death, the gather (cells from 18–40 cells around the start, over about 0.9 s), and the prompt's wording and look. The pieces aren't world cells yet (no simulation); they will be.
 - **Health's look is Claude's:** red for the bar and the hurt flash, from the guide's colour jobs (damage red is for losing health and hurt flashes); the pale trail on the bar; dents up to about 40% of the body's height with a crack or two; where on the bottom a dent lands is random for now.

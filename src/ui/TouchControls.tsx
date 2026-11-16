@@ -27,6 +27,7 @@ function HoldButton({ k, label, children }: { k: 'jump'; label: string; children
       onPointerDown={(e) => {
         e.preventDefault()
         touchInput[k] = true
+        if (k === 'jump') touchInput.jumpTap = true
         capture(e)
       }}
       onPointerUp={up}

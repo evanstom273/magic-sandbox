@@ -28,6 +28,7 @@ export class MainScene extends Phaser.Scene {
   private mode: 'alive' | 'dying' | 'dead' | 'returning' = 'alive'
   private modeTime = 0
   private jumpWasDown = false
+  private jumpLatch = false // a key press since the last frame, so a tap shorter than a frame still counts
   private shatter = new Shatter()
   private gather = new Gather()
   private squash = new Squash()
@@ -58,6 +59,10 @@ export class MainScene extends Phaser.Scene {
     this.body = this.pristine
     hud.set({ health: this.health.value, maxHealth: HEALTH.max })
     this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K') as Record<string, Phaser.Input.Keyboard.Key>
+    const jumpKeys = new Set(['Space', 'KeyK', 'KeyW', 'ArrowUp'])
+    this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+      if (jumpKeys.has(e.code) && !e.repeat) this.jumpLatch = true
+    })
 
     this.cameras.main.setBounds(0, 0, ROOM_W, ROOM_H)
     this.fitCamera()
@@ -85,7 +90,9 @@ export class MainScene extends Phaser.Scene {
   private readInput() {
     const k = this.keys
     let move = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0) || touchInput.moveX
-    let jump = k.SPACE.isDown || k.K.isDown || k.W.isDown || k.UP.isDown || touchInput.jump
+    let jump = k.SPACE.isDown || k.K.isDown || k.W.isDown || k.UP.isDown || touchInput.jump || this.jumpLatch || touchInput.jumpTap
+    this.jumpLatch = false
+    touchInput.jumpTap = false
     const pad = this.input.gamepad?.pad1
     if (pad) {
       const x = pad.leftStick.x

@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:19:12+00:00):**
+**Where the project stands (as of 2026-11-16T22:20:16+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -165,6 +165,12 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Catalysts change power, affinity, capacity and quirks** (all four picked): how strong, big or far-reaching spells are; which elements, shapes or triggers they favour; how many elements a spell can mix or how many prepared spells fit on the hotbar; and odd properties of their own. **Any spell can be cast from any catalyst; some are just better at it.** Lyra's note. *(2026-11-16T20:27:29+00:00 — History #27)*
 - **The floating hands hold the catalyst.** Not in the game yet: there are no catalysts until magic goes in. *(2026-11-16T22:19:12+00:00 — History #69)*
 - **Life is an element** (Lyra's): for healing, summoning and the like. The rest of the roster is in design now. *(2026-11-16T22:19:12+00:00 — History #70)*
+- **The element roster** (everything offered was picked):
+  - **Forces:** **Life** (#70), **Heat**, **Cold**, **Lightning**, **Force** (a push; also the movement magic), **Decay** (Life's opposite), **Light**, **Gravity** and **Void** (unmaking, or moving cells elsewhere).
+  - **Liquids:** **Water**, **Oil**, **Lava**, **Acid**.
+  - **Solids and powders:** **Sand**, **Stone**, **Gunpowder**, **Metal**.
+  - **Made by reactions, so in the world and drawable without being picked:** steam, smoke, fire, ice, obsidian, glass, rubble, molten metal, and plants and wood (Life's doing).
+  Each is both something to cast and something in the world that reacts. The descriptions offered with them (heat burns, melts and boils; cold freezes and condenses; lightning arcs along water and metal; force shoves and breaks; decay withers, rots and poisons; light lights, scorches and blinds; gravity pulls and lifts; void deletes or moves cells; water flows, conducts, freezes, boils and breaks falls; oil floats and burns long; lava ignites and cools to rock or obsidian; acid eats solids and bodies but not obsidian or glass; sand piles, cushions and melts to glass; stone builds and breaks to rubble; gunpowder explodes; metal conducts and melts) are Claude's, a starting point for the reactions. *(2026-11-16T22:20:16+00:00 — History #71)*
 - **One catalyst at a time,** swapping between those carried. Chosen over one in each hand. *(2026-11-16T20:27:29+00:00 — History #28)*
 - **The shapes are the spell types from Lyra's Magic Mod design** (a Minecraft mod of hers): **Projectile, Beam, AoE, Rune, Self, Target, Summon, Orbit, Wave, Cone** and **Weapon enchantment**. Lyra's call, replacing the examples Claude gave. *(2026-11-16T20:30:15+00:00 — History #29)*
 - **The casting types come from the Magic Mod too:** **Instant** (one activation casts once), **Charged** (holding strengthens a spell before release), **Channeled** (holding sustains an effect), **Burst** (one activation releases several shots) and **Continuous** (holding repeatedly casts individual shots). ~~How they fit into element + shape + trigger is open.~~ Each shape allows a few (#31). *(2026-11-16T20:30:15+00:00 — History #30)*
@@ -271,7 +277,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
 6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
 7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
-8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
+8. **Magic details** (#14–#20): ~~how elements and parts fit together~~ (#17); ~~when spells are put together~~ (#18); ~~what the elements are~~ (#21; the roster, #71); ~~what limits casting~~ (#22); ~~what the player casts with~~ (#23); ~~where spells come from~~ (#24); ~~how experimenting teaches magic~~ (#25); ~~what catalysts do~~ (#27, #28); mana's numbers; how many elements a spell can mix to begin with; ~~the list of shapes~~ (#29); ~~the triggers~~ (#32); ~~how casting types fit into a spell~~ (#31), though which shape allows which is still open; ~~what Weapon enchantment enchants~~ (weapons, #33); how quick mixing works on touch.
 9. ~~**Cell size.**~~ Fine (#34). Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 10. **Weapons** (#33): what they are, how they sit beside magic (which was picked as the main way to fight in #14's options), and how they're got.
 11. **What losing body cells means** (#38): for the player and for everything else, once the world can burn or dissolve them. Health is designed (#52–#60): a number shown as a bar, with marks on the body by kind of damage, mending as it heals. Still open: death (#60), and the actual numbers.
@@ -420,6 +426,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 68 | 2026-11-16T22:15:40+00:00 | Player | No. 6 in the game with movement and falls kept in cells; the hitbox becomes the whole figure, 10 × 16 (Claude's plan, approved). |
 | 69 | 2026-11-16T22:19:12+00:00 | Magic | The floating hands hold the catalyst. |
 | 70 | 2026-11-16T22:19:12+00:00 | Magic | Life is an element: healing, summoning and the like (Lyra's). |
+| 71 | 2026-11-16T22:20:16+00:00 | Magic | Element roster: forces Life, Heat, Cold, Lightning, Force, Decay, Light, Gravity, Void; liquids Water, Oil, Lava, Acid; solids Sand, Stone, Gunpowder, Metal; plus what reactions make (steam, smoke, fire, ice, obsidian, glass, rubble, molten metal, plants and wood). |
 
 ---
 

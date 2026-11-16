@@ -18,12 +18,13 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T20:13:02+00:00):**
+**Where the project stands (as of 2026-11-16T20:19:20+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
 - Project scaffold built and tested (History #5, #6): an empty Phaser scene inside React, deployed to GitHub Pages by a workflow on every push to `main`. Nothing game-related yet.
-- Lyra is explaining the top-level design (History #7–#13); rounds of questions expand it once she's done.
+- Top-level design from Lyra (History #7–#13).
+- Designing the magic: round 1 settled what it's for, how spells are made, and how much is scripted (History #14–#16).
 
 **Stack:** React, Vite, TypeScript, Tailwind CSS, Phaser and IndexedDB via Dexie.js, the same as the stealth game's, deployed on GitHub Pages for now (History #3, #4).
 - **React** is the outer shell; **Phaser** (v4) runs the game inside a single React component.
@@ -144,6 +145,11 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **The look of Terraria, with the physics and magic of Noita.** That's what the mix means. *(2026-11-16T20:13:02+00:00, documentation time — History #11)*
 - **Flat and seen side-on**, like Terraria: the voxels are a 2D grid of cells, not 3D. Read from "the look of Terraria"; flag if wrong. *(2026-11-16T20:13:02+00:00, documentation time — History #12)*
 
+### Magic
+- **Magic does everything:** fighting, shaping the world (digging, building, moving and transforming materials), getting around, and solving problems the world throws up. All four picked. *(2026-11-16T20:19:20+00:00 — History #14)*
+- **Spells are mixed from elements and built from parts, simpler than Noita.** Lyra's own combination of two options: elements mixed at cast time (a bit like Magicka; Claude's recommendation) and spells assembled from parts (like Noita's wands). How the two fit together is round 2. Fixed spells, and fixed spells with modifiers, were not chosen. *(2026-11-16T20:19:20+00:00 — History #15)*
+- **Mostly emergent, with some set pieces.** Spells are simple ingredients and most of the interesting results come from the simulated world, plus a few hand-made moments where it matters, such as a boss's weakness. Claude's recommendation, approved; fully emergent, designed spell combos and mostly scripted were not chosen. *(2026-11-16T20:19:20+00:00 — History #16)*
+
 ### Art and presentation
 - **Art style: Stylised Geometry**, as set out in `stylised-geometry/STYLISED_GEOMETRY.md` and its reference sheets. *(2026-11-16T19:56:10+00:00, documentation time — History #2)*
 - **The characters are in Lyra's Stylised Geometry style.** The world is voxels~~; how much of the guide applies to it is open (§E)~~, with Terraria's look (#11). *(2026-11-16T20:10:35+00:00, documentation time — History #10)*
@@ -166,7 +172,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 ## C. Current Development Scope
 
-**In design: the top level.** Lyra is explaining it: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Rounds of questions expand it once she's done. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
+**In design: magic.** The top level is from Lyra: a voxel-based magic physics game with the look of Terraria and the physics and magic of Noita, flat and side-on, with Stylised Geometry characters (#7–#13). Magic round 1 is done (#14–#16); round 2 is how elements and parts fit together. Stack and deployment are settled (#3, #4) and the scaffold is built and deploying (#5, #6; see §F).
 
 **Artifacts:** none yet.
 
@@ -189,7 +195,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 5. ~~**What "voxel" means here** (#7): a flat grid of cells seen side-on, as in Terraria and Noita, or 3D voxels. It decides the engine: Phaser is 2D only, so 3D voxels would reopen the stack (#3).~~ Flat and side-on (#12).
 6. ~~**Which parts of Terraria and which of Noita** (#9).~~ Terraria's look, Noita's physics and magic (#11). ~~They pull in different directions in places, such as a persistent world built up over hours against runs that end and start fresh.~~ Still open: how the game is structured, such as a world that's kept or runs that start fresh. Neither game's structure was part of the mix.
 7. ~~**How the style guide applies to a voxel world** (#10): characters are in the style, but the guide's environments are built from shapes. Its light and darkness, colour jobs and world palettes may still carry over.~~ The wrong question: the guide is a reference, not rules to apply (#13).
-8. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
+8. **Magic details** (#14–#16): how elements and parts fit together; when spells are put together; what the elements are; what limits casting; what the player casts with; where spells come from.
+9. **Cell size.** Terraria's blocks are chunky; Noita's cells are about a pixel each, which is a lot of why its sand, liquids and fire look and move the way they do. Where this sits shapes the look, the physics and how much the Fold has to simulate.
 
 ---
 
@@ -247,6 +254,9 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 11 | 2026-11-16T20:13:02+00:00 *(documentation time)* | Concept | The mix means the look of Terraria with the physics and magic of Noita. Refines #9. |
 | 12 | 2026-11-16T20:13:02+00:00 *(documentation time)* | Concept | Flat and seen side-on: the voxels are a 2D grid of cells, not 3D (read from "the look of Terraria"). Answers the open question on #7. |
 | 13 | 2026-11-16T20:13:02+00:00 *(documentation time)* | Art | The style guide is a guide, not gospel (restated by Lyra for this game). |
+| 14 | 2026-11-16T20:19:20+00:00 | Magic | Magic is for fighting, shaping the world, getting around and solving problems (all four). |
+| 15 | 2026-11-16T20:19:20+00:00 | Magic | Spells are mixed from elements and built from parts, simpler than Noita (Lyra combined two options). |
+| 16 | 2026-11-16T20:19:20+00:00 | Magic | Mostly emergent, with some hand-made set pieces (Claude's recommendation, approved). |
 
 ---
 

@@ -18,7 +18,7 @@ Authoritative, living record of the game's design. It's updated after everything
 
 A **voxel-based magic physics game** (History #7, #8): **the look of Terraria with the physics and magic of Noita** (History #9, #11), flat and seen side-on (History #12), with **characters in Lyra's Stylised Geometry art style** (History #10). Working title: none yet; the repository is `magic-sandbox`.
 
-**Where the project stands (as of 2026-11-16T22:26:37+00:00):**
+**Where the project stands (as of 2026-11-16T22:32:39+00:00):**
 - Living design document created, reset to the base of `STEALTH_GAME_DESIGN.md`: its structure and conventions, none of the stealth game's design (History #1).
 - Art style reference added to the repository as `stylised-geometry/`, including `make_sheets.py` (History #2).
 - Stack and deployment settled: the stealth game's stack, on GitHub Pages for now (History #3, #4).
@@ -175,6 +175,16 @@ Don't rush through the questions simply to get to implementation. The design pro
 - **Life summons all four ways:** **plants** (vines up walls, roots into bridges and platforms, moss that softens a landing), **little creatures** (small allies made of cells that help for a while, then wither), **elemental creatures** (Life mixed with another element animates it: with Heat a fire sprite, with Water a water spirit, with Stone a little golem; the world decides what they're like), and **life in what's there** (waking material already in the world: a mound of sand shambles off, a puddle crawls). *(2026-11-16T22:22:18+00:00 — History #73)*
 - **Life in the world:** **plants grow and spread** on their own where there's soil, water and light (fire burns them, decay rots them); **everything alive carries Life** (drawing it in from a creature drains it a little); and rare **Life springs**, glowing pools or blossoms of pure Life. *(2026-11-16T22:22:18+00:00 — History #74)*
 - **Life costs just mana,** like every other element. Claude's recommendation, approved over drawing from nearby life and costing health. *(2026-11-16T22:22:18+00:00 — History #75)*
+- **The Element Codex's proposals are approved** ("I like them all"): every behaviour, source, reaction and colour written for the first 27 elements is now the design. *(2026-11-16T22:32:39+00:00 — History #76)*
+- **The roster grows to 59** (Lyra asked about "say 50", then picked all 32 candidates offered, "59 will do"):
+  - **New forces:** **Shadow** (Light's opposite), **Magnetism** (gravity for metal), **Sound** (a shockwave), **Time** (slows or speeds the world).
+  - **Liquids:** **Mud** (made by water and dirt), **Slime**, **Mercury**, **Blood**, **Honey (sap)**, **Tar**, **Spirits**, **Liquid mana**.
+  - **Gases:** **Swamp gas**, **Mist**, **Spores** (made by fungus), **Plasma** (made by heat and lightning).
+  - **Earth and powders:** **Dirt**, **Clay**, **Salt**, **Snow**.
+  - **Solids:** **Coal**, **Crystal**, **Brick** (made by clay and heat), **Gold**.
+  - **From living things:** **Bone**, **Fungus**, **Seeds**, **Ash** (made by burning).
+  - **Odder materials:** **Thermite**, **Ectoplasm** (made where Shadow and Life meet), **Quicksand**, **Amber** (honey over Time).
+  Picked with the descriptions offered; the fuller details in the Element Codex (where each is drawn from, colours, the new forces' row of the grid, 33 new reactions) are Claude's, still to review. *(2026-11-16T22:32:39+00:00 — History #77)*
 - **One catalyst at a time,** swapping between those carried. Chosen over one in each hand. *(2026-11-16T20:27:29+00:00 — History #28)*
 - **The shapes are the spell types from Lyra's Magic Mod design** (a Minecraft mod of hers): **Projectile, Beam, AoE, Rune, Self, Target, Summon, Orbit, Wave, Cone** and **Weapon enchantment**. Lyra's call, replacing the examples Claude gave. *(2026-11-16T20:30:15+00:00 — History #29)*
 - **The casting types come from the Magic Mod too:** **Instant** (one activation casts once), **Charged** (holding strengthens a spell before release), **Channeled** (holding sustains an effect), **Burst** (one activation releases several shots) and **Continuous** (holding repeatedly casts individual shots). ~~How they fit into element + shape + trigger is open.~~ Each shape allows a few (#31). *(2026-11-16T20:30:15+00:00 — History #30)*
@@ -258,7 +268,7 @@ Don't rush through the questions simply to get to implementation. The design pro
 
 **Artifacts:**
 
-**Element Codex** (Artifact, element proposals, 2026-11-16T22:24:10+00:00): https://claude.ai/artifact/DV9k7rdGQ1bbkGHdZbkVdL. Also in the repository as `ELEMENT_CODEX.md` (Lyra's request, 2026-11-16T22:26:37+00:00), generated from the page (`docs/element-codex.html`) by `scripts/codex-to-md.cjs`, so the two stay the same. Every element in the roster (#71) and everything reactions make (27 in all): what it is in the world, what casting it does, and where it's drawn in from; a grid of what each force does to each material (and to creatures); and what happens when materials meet. **Lyra picked the elements; every behaviour in it is Claude's proposal**, waiting on her review. Things it adds that weren't asked for: rot and miasma (decay's leftovers), glow-moss, storm crystals, lodestones, rifts and vents as where forces are drawn from, sand packing into stone under gravity, lightning fusing sand to glass, cold slowing then freezing creatures, light blinding and scorching dark things, void stopping at obsidian, and every element's colour (kept clear of the guide's damage red, reward gold and the hero's white).
+**Element Codex** (Artifact, element proposals, 2026-11-16T22:24:10+00:00): https://claude.ai/artifact/DV9k7rdGQ1bbkGHdZbkVdL. Also in the repository as `ELEMENT_CODEX.md` (Lyra's request, 2026-11-16T22:26:37+00:00), generated from the page (`docs/element-codex.html`) by `scripts/codex-to-md.cjs`, so the two stay the same. Every element in the roster (#71) and everything reactions make (27 in all): what it is in the world, what casting it does, and where it's drawn in from; a grid of what each force does to each material (and to creatures); and what happens when materials meet. ~~**Lyra picked the elements; every behaviour in it is Claude's proposal**, waiting on her review.~~ Approved as written (#76). Version 2 (2026-11-16T22:32:39+00:00) adds the 32 elements of #77, with Claude's details still to review: 59 in all, 13 forces in the grid, 57 contacts. Things it adds that weren't asked for: rot and miasma (decay's leftovers), glow-moss, storm crystals, lodestones, rifts and vents as where forces are drawn from, sand packing into stone under gravity, lightning fusing sand to glass, cold slowing then freezing creatures, light blinding and scorching dark things, void stopping at obsidian, and every element's colour (kept clear of the guide's damage red, reward gold and the hero's white).
 
 **Caster Line-up** (Artifact, the player's look, 2026-11-16T22:06:27+00:00): https://claude.ai/artifact/Vk1v6qgioDqb5JFDsGK8dj. Six head-on-a-body builds in Fine cells with two eyes and a mouth, floating hands and floating feet, each enlarged and at game size on the test room's floor, switchable between idle, walking, jumping and hurt: No. 1 Block head, No. 2 Round head, No. 3 Bell (a robe-like flared body), No. 4 Tall head, No. 5 Wide body, and No. 6 Taller (14 cells; the others fit the 12 × 12 hitbox). Claude's choices, all up for change: the builds and proportions; white hands with an ink outline and dark feet; big eyes (2 × 3 cells with a highlight) on the wider heads and small ones (1 × 2) on the narrower; a two-cell mouth (a grimace when hurt); the seam between head and body; the blink, bob and walk timing.
 
@@ -437,6 +447,8 @@ Don't rush through the questions simply to get to implementation. The design pro
 | 73 | 2026-11-16T22:22:18+00:00 | Magic | Life summons plants, little creatures, elemental creatures (Life plus another element) and life in what's there. |
 | 74 | 2026-11-16T22:22:18+00:00 | Magic | Life in the world: plants grow and spread; everything alive carries it; rare Life springs. |
 | 75 | 2026-11-16T22:22:18+00:00 | Magic | Life costs just mana (Claude's recommendation, approved). |
+| 76 | 2026-11-16T22:32:39+00:00 | Magic | The Element Codex's proposals for the first 27 elements are approved as written. |
+| 77 | 2026-11-16T22:32:39+00:00 | Magic | The roster grows to 59: forces Shadow, Magnetism, Sound, Time; Mud, Slime, Mercury, Blood, Honey, Tar, Spirits, Liquid mana; Swamp gas, Mist, Spores, Plasma; Dirt, Clay, Salt, Snow; Coal, Crystal, Brick, Gold; Bone, Fungus, Seeds, Ash; Thermite, Ectoplasm, Quicksand, Amber (Claude's details to review). |
 
 ---
 

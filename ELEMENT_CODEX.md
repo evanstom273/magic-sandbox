@@ -2,7 +2,7 @@
 
 Every element is two things: something you cast, and something in the world that reacts. When a spell mixes elements, or materials meet, the world decides what happens, by these rules (`GAME_DESIGN.md` #19, #20, #21).
 
-**Status: proposals.** Lyra picked the elements (#70, #71); **everything written about them here is Claude's proposal**, waiting on her review. Decisions made from it are recorded in `GAME_DESIGN.md`; this file is kept in step with the Element Codex artifact: https://claude.ai/artifact/DV9k7rdGQ1bbkGHdZbkVdL
+**Status:** Lyra picked all 59 elements (#70, #71, #77). She approved the first 27 as written (#76); **the 32 added in round two are her picks with Claude's details**, still to review. Decisions made from it are recorded in `GAME_DESIGN.md`; this file is kept in step with the Element Codex artifact: https://claude.ai/artifact/DV9k7rdGQ1bbkGHdZbkVdL
 
 ## Elements
 
@@ -80,6 +80,38 @@ Colour: `#c03aff` (speckled)
 - **Cast:** Unmakes the cells it touches, digging clean holes through anything but obsidian; cast on yourself, it moves you (a blink). Eats creatures' cells, yours included if you're careless.
 - **Draw it in from:** Rifts.
 
+#### Shadow (added in round two; details to review)
+
+Colour: `#3b3355`
+
+- **In the world:** Shadow pools in the deepest places: patches of dark that swallow light.
+- **Cast:** Light's opposite, as Decay is Life's: snuffs light (glowing crystals and moss dim, fire still burns but stops lighting things), pools darkness you can hide in, makes plants wilt, and feeds dark things. Light and Shadow cancel where they meet.
+- **Draw it in from:** Shadow pools.
+
+#### Magnetism (added in round two; details to review)
+
+Colour: `#ff7ab8`
+
+- **In the world:** Magnetite: dark ore that drags loose metal towards it.
+- **Cast:** Gravity for metal only: pulls metal in or flings it away, drags creatures that carry or are made of metal, and lines metal filings up into bridges.
+- **Draw it in from:** Magnetite.
+
+#### Sound (added in round two; details to review)
+
+Colour: `#9ad8c8`
+
+- **In the world:** Echoing caves and singing crystals that hum when touched.
+- **Cast:** A shockwave: shatters glass, ice, crystal and bone; shakes loose ceilings and sand down; stuns creatures, and wakes, lures or scares them.
+- **Draw it in from:** Singing crystals, echoes.
+
+#### Time (added in round two; details to review)
+
+Colour: `#cbb27a`
+
+- **In the world:** Still pockets where nothing moves: a waterfall frozen mid-pour, dust hanging in the air.
+- **Cast:** Slows or speeds the world where it lands: slowed, liquids stop, fire hangs, creatures crawl; sped up, plants grow, bloom and rot, wood ages, lava cools, honey turns to amber. Rare and powerful.
+- **Draw it in from:** Still pockets.
+
 ### Liquids
 
 #### Water
@@ -114,6 +146,80 @@ Colour: `#c8ff3a`
 - **Cast:** Makes acid: eats stone, metal, sand, wood, plants and bodies cell by cell, used up as it goes, giving off smoke. Obsidian and glass resist it; water dilutes it.
 - **Draw it in from:** Acid pools.
 
+#### Slime (added in round two; details to review)
+
+Colour: `#5fd8b0`
+
+- **In the world:** Slime pools, and the trails slimes leave.
+- **Cast:** Makes slime: sticks to walls and ceilings, slows creatures caught in it, and bounces you higher off it. Salt shrivels it; fire dries it out.
+- **Draw it in from:** Slime.
+
+#### Mercury (added in round two; details to review)
+
+Colour: `#d8dce8`
+
+- **In the world:** Heavy silver pools at the bottom of everything.
+- **Cast:** Makes mercury: a liquid metal that sinks below every other liquid, conducts lightning, and poisons the living.
+- **Draw it in from:** Mercury.
+
+#### Blood (added in round two; details to review)
+
+Colour: `#8a1f2a`
+
+- **In the world:** Comes from hurt creatures (theirs, not yours: the player is cells and ink).
+- **Cast:** Makes blood: slippery underfoot. Life grows things lush in it; Decay feeds on it.
+- **Draw it in from:** Blood.
+
+#### Honey (sap) (added in round two; details to review)
+
+Colour: `#e8a23a`
+
+- **In the world:** Oozes from plants and old trees.
+- **Cast:** Makes honey: sticky and slow, traps small creatures, heals a little; burns, then hardens; Time turns it to amber.
+- **Draw it in from:** Plants and trees that weep it.
+
+#### Tar (added in round two; details to review)
+
+Colour: `#221d1d`
+
+- **In the world:** Black pits and seeps.
+- **Cast:** Makes tar: black, sticky and slow; burns long and smoky; sets hard with cold.
+- **Draw it in from:** Tar pits.
+
+#### Spirits (added in round two; details to review)
+
+Colour: `#e6e0ff`
+
+- **In the world:** Strange stills and forgotten casks.
+- **Cast:** Makes spirits: thin, evaporates, burns fast with a pale blue flame, and washes rot and slime away.
+- **Draw it in from:** Spirits.
+
+#### Liquid mana (added in round two; details to review)
+
+Colour: `#57c8ff`
+
+- **In the world:** Glowing pools of raw magic, rare and precious.
+- **Cast:** Makes liquid mana: standing in it refills your mana; it lights its surroundings; Void meeting it unmakes everything nearby in a violent burst.
+- **Draw it in from:** Mana pools.
+
+### Gases
+
+#### Swamp gas (added in round two; details to review)
+
+Colour: `#8aa07a`
+
+- **In the world:** Rises from rot and mud, faint and hard to see.
+- **Cast:** Castable once drawn in: a cloud that explodes with any spark or flame.
+- **Draw it in from:** Swamps, rot.
+
+#### Mist (added in round two; details to review)
+
+Colour: `#b8c0cc`
+
+- **In the world:** Hangs low in damp places; hides what's in it; rains out slowly into water; cold turns it to snow.
+- **Cast:** Makes mist: cover to hide in, and slow rain.
+- **Draw it in from:** Mist.
+
 ### Solids and powders
 
 #### Sand
@@ -147,6 +253,102 @@ Colour: `#9aa4b0`
 - **In the world:** Ore veins and old structures.
 - **Cast:** Makes metal: heavy and tough (force won't break it); conducts lightning; sustained heat melts it to molten metal, which sets again; decay and acid wear it down slowly.
 - **Draw it in from:** Metal.
+
+#### Dirt (added in round two; details to review)
+
+Colour: `#6e4a2e`
+
+- **In the world:** Soil: the ground plants grow best in.
+- **Cast:** Makes dirt: piles like sand but holds a slope; water turns it to mud; Life's favourite ground.
+- **Draw it in from:** Dirt.
+
+#### Clay (added in round two; details to review)
+
+Colour: `#b0705a`
+
+- **In the world:** Dense banks by water.
+- **Cast:** Makes clay: holds whatever shape it's given; water softens it to mud; heat fires it into brick.
+- **Draw it in from:** Clay.
+
+#### Salt (added in round two; details to review)
+
+Colour: `#e8e4dc`
+
+- **In the world:** Crusts and flats where water has dried.
+- **Cast:** Makes salt: melts ice and snow, dissolves into water (salty water won't freeze and plants won't grow in it), stops rot and decay where it's scattered, and shrivels slimes.
+- **Draw it in from:** Salt.
+
+#### Snow (added in round two; details to review)
+
+Colour: `#e2ecfa`
+
+- **In the world:** Drifts in cold places; cold makes it from mist and water in the air.
+- **Cast:** Makes snow: a light powder that cushions falls best of all, melts to water, and packs into ice.
+- **Draw it in from:** Snow (also gives Cold).
+
+#### Coal (added in round two; details to review)
+
+Colour: `#2a2a30`
+
+- **In the world:** Seams in the rock; made when wood burns without air (buried under sand or dirt).
+- **Cast:** Makes coal: the best fuel, burning long and hot.
+- **Draw it in from:** Coal.
+
+#### Crystal (added in round two; details to review)
+
+Colour: `#9fe8f0`
+
+- **In the world:** Grows slowly in caves (Time speeds it).
+- **Cast:** Makes crystal: rings when struck (and Sound shatters it), stores Light and glows with it, and splits lightning into several arcs.
+- **Draw it in from:** Crystal (also gives Light when lit).
+
+#### Gold (added in round two; details to review)
+
+Colour: `#ffcf4a`
+
+- **In the world:** Veins and nuggets, worth finding. In the guide's reward gold on purpose: it is treasure.
+- **Cast:** Makes gold: soft and heavy, never corrodes (acid and decay don't touch it), melts easily with heat and sets again.
+- **Draw it in from:** Gold.
+
+#### Bone (added in round two; details to review)
+
+Colour: `#e6dcc4`
+
+- **In the world:** What's left of creatures.
+- **Cast:** Makes bone: brittle to Force and Sound; Life can stand bones back up as skeletons (waking what's there).
+- **Draw it in from:** Bones.
+
+#### Fungus (added in round two; details to review)
+
+Colour: `#c87ad8`
+
+- **In the world:** Grows in the dark on rot and wood, glows faintly, and puffs spores. Decay feeds it rather than killing it.
+- **Cast:** Makes fungus: a glowing growth that spreads over rot and wood.
+- **Draw it in from:** Fungus (also gives Decay).
+
+#### Seeds (added in round two; details to review)
+
+Colour: `#a08a4a`
+
+- **In the world:** Scatter on the wind and from plants.
+- **Cast:** Makes seeds: they sprout into the plant they came from with water and dirt, faster with Life; fire burns them.
+- **Draw it in from:** Seeds (also give Life).
+
+#### Thermite (added in round two; details to review)
+
+Colour: `#8a3a3a` (speckled)
+
+- **In the world:** Rare deposits of rusty powder.
+- **Cast:** Makes thermite: once lit by lightning or intense heat it burns hotter than anything, straight through metal and stone.
+- **Draw it in from:** Thermite.
+
+#### Quicksand (added in round two; details to review)
+
+Colour: `#d0a860`
+
+- **In the world:** Wet sand in deserts and swamps that swallows what stands still in it; moving (struggling) gets you out slowly. Cold freezes it solid.
+- **Cast:** Makes quicksand: a trap that drags creatures down.
+- **Draw it in from:** Quicksand.
 
 ### Made by reactions
 
@@ -230,9 +432,65 @@ Colour: `#7a8a3a`
 - **Cast:** Castable once drawn in: a lingering poison cloud.
 - **Draw it in from:** Gives Decay.
 
+#### Mud (added in round two; details to review)
+
+Colour: `#6a4e36`
+
+- **In the world:** Made by water and dirt. Thick and slow, slows whatever wades in, cushions falls, dries back to dirt with heat or time.
+- **Cast:** Castable once drawn in: a slow, clinging flood.
+- **Draw it in from:** Mud.
+
+#### Spores (added in round two; details to review)
+
+Colour: `#c8b88a`
+
+- **In the world:** Made by fungus: drift on the air and grow fungus where they land. Life speeds them; fire burns them.
+- **Cast:** Castable once drawn in: sow fungus wherever they settle.
+- **Draw it in from:** Spores.
+
+#### Plasma (added in round two; details to review)
+
+Colour: `#ff9aff`
+
+- **In the world:** Made by heat and lightning together: an extremely hot glowing gas that melts almost anything, briefly, then fades.
+- **Cast:** Castable once drawn in: a short burst that melts through nearly everything.
+- **Draw it in from:** Plasma (while it lasts).
+
+#### Brick (added in round two; details to review)
+
+Colour: `#a0523a`
+
+- **In the world:** Made by clay and heat: tough, doesn't burn; acid eats it slowly; only strong Force breaks it.
+- **Cast:** Castable once drawn in: a solid wall that won't catch fire.
+- **Draw it in from:** Brick.
+
+#### Ash (added in round two; details to review)
+
+Colour: `#8a8a90`
+
+- **In the world:** Made by burning: a light powder that drifts, smothers small fires, and makes soil richer for plants.
+- **Cast:** Castable once drawn in: smother a fire, or feed a garden.
+- **Draw it in from:** Ash.
+
+#### Ectoplasm (added in round two; details to review)
+
+Colour: `#9affd8`
+
+- **In the world:** Made where Shadow and Life meet: a ghostly goo that glows, drifts upward, lets things pass through it, and haunts. Light dispels it.
+- **Cast:** Castable once drawn in: a glowing haze things pass through.
+- **Draw it in from:** Ectoplasm.
+
+#### Amber (added in round two; details to review)
+
+Colour: `#e0901a`
+
+- **In the world:** Made by honey or sap hardening over Time: clear and golden, preserving whatever is caught inside. Heat melts it back.
+- **Cast:** Castable once drawn in: trap something in amber.
+- **Draw it in from:** Amber.
+
 ## What each force does to each material
 
-Cast a force at something and this is what happens. "Sustained" means it takes a held spell (a Beam, a channelled Cone), not a single bolt.
+Cast a force at something and this is what happens. "Sustained" means it takes a held spell (a Beam, a channelled Cone), not a single bolt. The materials added in round two describe their own reactions on their cards and in the next section.
 
 | Force ↓ on → | Water | Oil | Lava | Acid | Sand | Stone | Gunpowder | Metal | Wood and plants | Ice | Steam | Creatures |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -245,6 +503,10 @@ Cast a force at something and this is what happens. "Sustained" means it takes a
 | **Light** | — | — | — | — | — | — | — | Reflects | Grows faster | Glows | — | Blinds; scorches dark things |
 | **Gravity** | Pulls into a floating ball | Floats | Floats | Floats | Heaps; packs to stone | Pulls loose stone | Heaps | — | — | — | Gathers | Pulls in, or lifts |
 | **Void** | Unmade | Unmade | Unmade | Unmade | Unmade | Unmade | Unmade | Unmade | Unmade | Unmade | Unmade | Cells unmade |
+| **Shadow** | — | — | Dims its glow | — | — | — | — | — | Wilts plants | Dims its glow | — | Hides you; feeds dark things |
+| **Magnetism** | — | — | — | — | — | — | — | Pulls or flings it | — | — | — | Drags metal ones |
+| **Sound** | Ripples, splashes | — | — | — | Slumps, settles | Shakes loose bits down | — | Rings | — | Shatters | — | Stuns; wakes, lures or scares |
+| **Time** | Slowed: stops; sped: evaporates | Slowed: stops | Sped: cools to stone | Sped: eats faster | — | Sped: weathers to sand | — | Sped: corrodes | Sped: grows, then rots | Sped: melts | Sped: condenses | Slowed or sped up (you too) |
 
 ## When materials meet
 
@@ -274,10 +536,43 @@ What happens on contact, with no spell involved.
 - **Storm crystal + water:** Every so often, the water is electrified.
 - **A creature + steam, fire or lava:** Burned: cells eaten.
 - **A creature + Life spring:** Healed.
+- **Water + dirt:** Mud.
+- **Mud + heat or time:** Dries back to dirt.
+- **Clay + water:** Softens to mud.
+- **Clay + heat:** Fires into brick.
+- **Salt + water:** Dissolves; the water is salty: it won't freeze and plants won't grow in it.
+- **Salt + ice or snow:** Melts them.
+- **Salt + rot or slime:** Stops rot; shrivels slime.
+- **Snow + heat:** Melts to water.
+- **Mist + cold:** Snow.
+- **Mist:** Rains out slowly into water.
+- **Wood burning with no air (under sand or dirt):** Coal instead of ash.
+- **Wood, plants or coal burning:** Leave ash.
+- **Ash + a small fire:** Smothers it.
+- **Ash or blood + dirt:** Richer soil: plants grow faster.
+- **Seeds + water + dirt:** Sprout.
+- **Fungus + rot or wood, in the dark:** Fungus spreads; puffs spores.
+- **Spores + wood, rot or dirt:** Fungus grows where they land.
+- **Shadow + Life:** Ectoplasm.
+- **Light + ectoplasm:** Dispelled.
+- **Heat + lightning together:** Plasma.
+- **Honey + time:** Amber.
+- **Swamp gas + spark or flame:** Explodes.
+- **Spirits + flame:** A fast, pale blue fire that burns out quickly.
+- **Tar + cold:** Sets hard.
+- **Thermite + lightning or intense heat:** Burns through metal and stone.
+- **Void + liquid mana:** A violent burst that unmakes everything nearby.
+- **Crystal + lightning:** The arc splits into several.
+- **Crystal + light:** Stores it and glows.
+- **Mercury + any other liquid:** Sinks beneath it.
+- **A creature still in quicksand:** Sinks; moving gets it out slowly.
+- **A creature in slime, honey, tar or mud:** Slowed (stuck, in honey, if it's small).
+- **A creature in mercury:** Poisoned.
+- **A creature + a liquid mana pool:** Mana refills.
 
 ## Notes
 
 - Colours stay clear of the style guide's damage red and reward gold, and of the hero's white, so nothing in the world borrows those jobs.
 - Creatures (and the player) are made of cells, so fire, acid, decay and void eat their cells away, and Life mends them.
-- Miasma and rot are new: they're what decay leaves behind. Snow, rust and anything else not listed would be new elements, not proposed here.
+- Miasma and rot are what decay leaves behind. Blood is a dark red, kept off the damage red; snow and salt are kept off the hero's white; gold is in reward gold on purpose, because it's treasure. Anything not listed would be a new element.
 - Numbers (how fast, how far, how long) come later, in play.

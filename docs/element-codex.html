@@ -60,7 +60,7 @@ tr.dim td, tr.dim th { opacity: 0.25; }
 <div class="wrap">
   <header>
     <h1>Element Codex</h1>
-    <p class="lede">Every element is two things: something you cast, and something in the world that reacts. When a spell mixes elements, or materials meet, the world decides what happens, by these rules. Lyra picked the elements; <strong>everything written about them here is Claude's proposal</strong>, to strike or change.</p>
+    <p class="lede">Every element is two things: something you cast, and something in the world that reacts. When a spell mixes elements, or materials meet, the world decides what happens, by these rules. Lyra picked all 59 elements. She approved the first 27 as written here; <strong>the 32 added in round two are her picks with Claude's details</strong>, to strike or change.</p>
   </header>
 
   <div class="chips" role="group" aria-label="Show">
@@ -68,13 +68,15 @@ tr.dim td, tr.dim th { opacity: 0.25; }
     <button id="f-force" data-f="force">Forces</button>
     <button id="f-liquid" data-f="liquid">Liquids</button>
     <button id="f-solid" data-f="solid">Solids and powders</button>
+    <button id="f-gas" data-f="gas">Gases</button>
     <button id="f-made" data-f="made">Made by reactions</button>
+    <button id="f-added" data-f="added">Added in round two</button>
   </div>
   <div class="grid" id="cards"></div>
 
   <section>
     <h2>What each force does to each material</h2>
-    <p class="sub">Cast a force at something and this is what happens. "Sustained" means it takes a held spell (a Beam, a channelled Cone), not a single bolt. Highlight a force by tapping its card above.</p>
+    <p class="sub">Cast a force at something and this is what happens. "Sustained" means it takes a held spell (a Beam, a channelled Cone), not a single bolt. Highlight a force by tapping its card above. The materials added in round two describe their own reactions on their cards and below.</p>
   </section>
   <div class="table-wrap"><table id="matrix"></table></div>
 
@@ -84,7 +86,7 @@ tr.dim td, tr.dim th { opacity: 0.25; }
   </section>
   <div class="contacts" id="contacts"></div>
 
-  <p class="notes"><strong>Notes on the proposals.</strong> Colours stay clear of the style guide's damage red and reward gold, and of the hero's white, so nothing in the world borrows those jobs. Creatures (and the player) are made of cells, so fire, acid, decay and void eat their cells away, and Life mends them. Miasma and rot are new: they're what decay leaves behind. Snow, rust and anything else not listed would be new elements, not proposed here. Numbers (how fast, how far, how long) come later, in play.</p>
+  <p class="notes"><strong>Notes on the proposals.</strong> Colours stay clear of the style guide's damage red and reward gold, and of the hero's white, so nothing in the world borrows those jobs. Creatures (and the player) are made of cells, so fire, acid, decay and void eat their cells away, and Life mends them. Miasma and rot are what decay leaves behind. Blood is a dark red, kept off the damage red; snow and salt are kept off the hero's white; gold is in reward gold on purpose, because it's treasure. Anything not listed would be a new element. Numbers (how fast, how far, how long) come later, in play.</p>
 </div>
 
 <script>
@@ -173,24 +175,139 @@ const E = [
   { id: 'molten', name: 'Molten metal', kind: 'made', col: '#ffd27a', world: 'Metal plus sustained heat. A heavy, burning liquid that sets back into metal (fast with water or cold).', cast: 'Castable once drawn in: pour it into a gap and let it set.', draw: 'Molten metal.' },
   { id: 'plants', name: 'Plants and wood', kind: 'made', col: '#4fae4a', world: 'Life\'s doing: grass, moss, vines, roots and trees. Grow with water and light; burn; rot with decay. Moss softens falls.', cast: 'Castable once drawn in, or grown with Life.', draw: 'Plants and wood (also give Life).' },
   { id: 'rot', name: 'Rot and miasma', kind: 'made', col: '#7a8a3a', world: 'Decay\'s leftovers: rot creeps across wood and plants; miasma is a low poison gas that hurts the living. Life clears both; fire burns miasma off.', cast: 'Castable once drawn in: a lingering poison cloud.', draw: 'Gives Decay.' },
+  // ---- Added in round two (#77): Lyra's picks; the details are Claude's ----
+  // Forces
+  { id: 'shadow', name: 'Shadow', kind: 'force', added: true, col: '#3b3355',
+    world: 'Shadow pools in the deepest places: patches of dark that swallow light.',
+    cast: 'Light\'s opposite, as Decay is Life\'s: snuffs light (glowing crystals and moss dim, fire still burns but stops lighting things), pools darkness you can hide in, makes plants wilt, and feeds dark things. Light and Shadow cancel where they meet.',
+    draw: 'Shadow pools.' },
+  { id: 'magnetism', name: 'Magnetism', kind: 'force', added: true, col: '#ff7ab8',
+    world: 'Magnetite: dark ore that drags loose metal towards it.',
+    cast: 'Gravity for metal only: pulls metal in or flings it away, drags creatures that carry or are made of metal, and lines metal filings up into bridges.',
+    draw: 'Magnetite.' },
+  { id: 'sound', name: 'Sound', kind: 'force', added: true, col: '#9ad8c8',
+    world: 'Echoing caves and singing crystals that hum when touched.',
+    cast: 'A shockwave: shatters glass, ice, crystal and bone; shakes loose ceilings and sand down; stuns creatures, and wakes, lures or scares them.',
+    draw: 'Singing crystals, echoes.' },
+  { id: 'time', name: 'Time', kind: 'force', added: true, col: '#cbb27a',
+    world: 'Still pockets where nothing moves: a waterfall frozen mid-pour, dust hanging in the air.',
+    cast: 'Slows or speeds the world where it lands: slowed, liquids stop, fire hangs, creatures crawl; sped up, plants grow, bloom and rot, wood ages, lava cools, honey turns to amber. Rare and powerful.',
+    draw: 'Still pockets.' },
+  // Liquids
+  { id: 'mud', name: 'Mud', kind: 'made', added: true, col: '#6a4e36',
+    world: 'Made by water and dirt. Thick and slow, slows whatever wades in, cushions falls, dries back to dirt with heat or time.',
+    cast: 'Castable once drawn in: a slow, clinging flood.', draw: 'Mud.' },
+  { id: 'slime', name: 'Slime', kind: 'liquid', added: true, col: '#5fd8b0',
+    world: 'Slime pools, and the trails slimes leave.',
+    cast: 'Makes slime: sticks to walls and ceilings, slows creatures caught in it, and bounces you higher off it. Salt shrivels it; fire dries it out.',
+    draw: 'Slime.' },
+  { id: 'mercury', name: 'Mercury', kind: 'liquid', added: true, col: '#d8dce8',
+    world: 'Heavy silver pools at the bottom of everything.',
+    cast: 'Makes mercury: a liquid metal that sinks below every other liquid, conducts lightning, and poisons the living.',
+    draw: 'Mercury.' },
+  { id: 'blood', name: 'Blood', kind: 'liquid', added: true, col: '#8a1f2a',
+    world: 'Comes from hurt creatures (theirs, not yours: the player is cells and ink).',
+    cast: 'Makes blood: slippery underfoot. Life grows things lush in it; Decay feeds on it.',
+    draw: 'Blood.' },
+  { id: 'honey', name: 'Honey (sap)', kind: 'liquid', added: true, col: '#e8a23a',
+    world: 'Oozes from plants and old trees.',
+    cast: 'Makes honey: sticky and slow, traps small creatures, heals a little; burns, then hardens; Time turns it to amber.',
+    draw: 'Plants and trees that weep it.' },
+  { id: 'tar', name: 'Tar', kind: 'liquid', added: true, col: '#221d1d',
+    world: 'Black pits and seeps.',
+    cast: 'Makes tar: black, sticky and slow; burns long and smoky; sets hard with cold.',
+    draw: 'Tar pits.' },
+  { id: 'spirits', name: 'Spirits', kind: 'liquid', added: true, col: '#e6e0ff',
+    world: 'Strange stills and forgotten casks.',
+    cast: 'Makes spirits: thin, evaporates, burns fast with a pale blue flame, and washes rot and slime away.',
+    draw: 'Spirits.' },
+  { id: 'mana', name: 'Liquid mana', kind: 'liquid', added: true, col: '#57c8ff',
+    world: 'Glowing pools of raw magic, rare and precious.',
+    cast: 'Makes liquid mana: standing in it refills your mana; it lights its surroundings; Void meeting it unmakes everything nearby in a violent burst.',
+    draw: 'Mana pools.' },
+  // Gases
+  { id: 'swampgas', name: 'Swamp gas', kind: 'gas', added: true, col: '#8aa07a',
+    world: 'Rises from rot and mud, faint and hard to see.',
+    cast: 'Castable once drawn in: a cloud that explodes with any spark or flame.', draw: 'Swamps, rot.' },
+  { id: 'mist', name: 'Mist', kind: 'gas', added: true, col: '#b8c0cc',
+    world: 'Hangs low in damp places; hides what\'s in it; rains out slowly into water; cold turns it to snow.',
+    cast: 'Makes mist: cover to hide in, and slow rain.', draw: 'Mist.' },
+  { id: 'spores', name: 'Spores', kind: 'made', added: true, col: '#c8b88a',
+    world: 'Made by fungus: drift on the air and grow fungus where they land. Life speeds them; fire burns them.',
+    cast: 'Castable once drawn in: sow fungus wherever they settle.', draw: 'Spores.' },
+  { id: 'plasma', name: 'Plasma', kind: 'made', added: true, col: '#ff9aff',
+    world: 'Made by heat and lightning together: an extremely hot glowing gas that melts almost anything, briefly, then fades.',
+    cast: 'Castable once drawn in: a short burst that melts through nearly everything.', draw: 'Plasma (while it lasts).' },
+  // Earth and powders
+  { id: 'dirt', name: 'Dirt', kind: 'solid', added: true, col: '#6e4a2e',
+    world: 'Soil: the ground plants grow best in.',
+    cast: 'Makes dirt: piles like sand but holds a slope; water turns it to mud; Life\'s favourite ground.', draw: 'Dirt.' },
+  { id: 'clay', name: 'Clay', kind: 'solid', added: true, col: '#b0705a',
+    world: 'Dense banks by water.',
+    cast: 'Makes clay: holds whatever shape it\'s given; water softens it to mud; heat fires it into brick.', draw: 'Clay.' },
+  { id: 'salt', name: 'Salt', kind: 'solid', added: true, col: '#e8e4dc',
+    world: 'Crusts and flats where water has dried.',
+    cast: 'Makes salt: melts ice and snow, dissolves into water (salty water won\'t freeze and plants won\'t grow in it), stops rot and decay where it\'s scattered, and shrivels slimes.', draw: 'Salt.' },
+  { id: 'snow', name: 'Snow', kind: 'solid', added: true, col: '#e2ecfa',
+    world: 'Drifts in cold places; cold makes it from mist and water in the air.',
+    cast: 'Makes snow: a light powder that cushions falls best of all, melts to water, and packs into ice.', draw: 'Snow (also gives Cold).' },
+  // Solids
+  { id: 'coal', name: 'Coal', kind: 'solid', added: true, col: '#2a2a30',
+    world: 'Seams in the rock; made when wood burns without air (buried under sand or dirt).',
+    cast: 'Makes coal: the best fuel, burning long and hot.', draw: 'Coal.' },
+  { id: 'crystal', name: 'Crystal', kind: 'solid', added: true, col: '#9fe8f0',
+    world: 'Grows slowly in caves (Time speeds it).',
+    cast: 'Makes crystal: rings when struck (and Sound shatters it), stores Light and glows with it, and splits lightning into several arcs.', draw: 'Crystal (also gives Light when lit).' },
+  { id: 'brick', name: 'Brick', kind: 'made', added: true, col: '#a0523a',
+    world: 'Made by clay and heat: tough, doesn\'t burn; acid eats it slowly; only strong Force breaks it.',
+    cast: 'Castable once drawn in: a solid wall that won\'t catch fire.', draw: 'Brick.' },
+  { id: 'gold', name: 'Gold', kind: 'solid', added: true, col: '#ffcf4a',
+    world: 'Veins and nuggets, worth finding. In the guide\'s reward gold on purpose: it is treasure.',
+    cast: 'Makes gold: soft and heavy, never corrodes (acid and decay don\'t touch it), melts easily with heat and sets again.', draw: 'Gold.' },
+  // From living things
+  { id: 'bone', name: 'Bone', kind: 'solid', added: true, col: '#e6dcc4',
+    world: 'What\'s left of creatures.',
+    cast: 'Makes bone: brittle to Force and Sound; Life can stand bones back up as skeletons (waking what\'s there).', draw: 'Bones.' },
+  { id: 'fungus', name: 'Fungus', kind: 'solid', added: true, col: '#c87ad8',
+    world: 'Grows in the dark on rot and wood, glows faintly, and puffs spores. Decay feeds it rather than killing it.',
+    cast: 'Makes fungus: a glowing growth that spreads over rot and wood.', draw: 'Fungus (also gives Decay).' },
+  { id: 'seeds', name: 'Seeds', kind: 'solid', added: true, col: '#a08a4a',
+    world: 'Scatter on the wind and from plants.',
+    cast: 'Makes seeds: they sprout into the plant they came from with water and dirt, faster with Life; fire burns them.', draw: 'Seeds (also give Life).' },
+  { id: 'ash', name: 'Ash', kind: 'made', added: true, col: '#8a8a90',
+    world: 'Made by burning: a light powder that drifts, smothers small fires, and makes soil richer for plants.',
+    cast: 'Castable once drawn in: smother a fire, or feed a garden.', draw: 'Ash.' },
+  // Odder materials
+  { id: 'thermite', name: 'Thermite', kind: 'solid', added: true, col: '#8a3a3a', pattern: true,
+    world: 'Rare deposits of rusty powder.',
+    cast: 'Makes thermite: once lit by lightning or intense heat it burns hotter than anything, straight through metal and stone.', draw: 'Thermite.' },
+  { id: 'ectoplasm', name: 'Ectoplasm', kind: 'made', added: true, col: '#9affd8',
+    world: 'Made where Shadow and Life meet: a ghostly goo that glows, drifts upward, lets things pass through it, and haunts. Light dispels it.',
+    cast: 'Castable once drawn in: a glowing haze things pass through.', draw: 'Ectoplasm.' },
+  { id: 'quicksand', name: 'Quicksand', kind: 'solid', added: true, col: '#d0a860',
+    world: 'Wet sand in deserts and swamps that swallows what stands still in it; moving (struggling) gets you out slowly. Cold freezes it solid.',
+    cast: 'Makes quicksand: a trap that drags creatures down.', draw: 'Quicksand.' },
+  { id: 'amber', name: 'Amber', kind: 'made', added: true, col: '#e0901a',
+    world: 'Made by honey or sap hardening over Time: clear and golden, preserving whatever is caught inside. Heat melts it back.',
+    cast: 'Castable once drawn in: trap something in amber.', draw: 'Amber.' },
 ];
 
-const KIND_NAME = { force: 'Force', liquid: 'Liquid', solid: 'Solid', made: 'Made by reactions' };
+const KIND_NAME = { force: 'Force', liquid: 'Liquid', gas: 'Gas', solid: 'Solid', made: 'Made by reactions' };
 const cards = document.getElementById('cards');
 for (const e of E) {
   const el = document.createElement('article');
-  el.className = 'card'; el.dataset.kind = e.kind; el.dataset.id = e.id;
+  el.className = 'card'; el.dataset.kind = e.kind; el.dataset.id = e.id; if (e.added) el.dataset.added = '1';
   const bg = e.pattern ? `background-color:${e.col};background-image:radial-gradient(#0008 1px, transparent 1.5px)` : `background:${e.col}`;
   el.innerHTML = `<header><span class="sw" style="${bg}"></span><h3>${e.name}</h3><span class="kind">${KIND_NAME[e.kind]}</span></header>
     <dl><div><dt>In the world</dt><dd>${e.world}</dd></div><div><dt>Cast</dt><dd>${e.cast}</dd></div><div><dt>Draw it in from</dt><dd>${e.draw}</dd></div></dl>
-    ${e.picked ? `<span class="picked">Lyra's element</span>` : ''}`;
+    ${e.picked ? `<span class="picked">Lyra's element</span>` : e.added ? `<span class="picked">Added in round two: details to review</span>` : ''}`;
   if (e.kind === 'force') { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', `Highlight ${e.name} in the grid`); el.style.cursor = 'pointer'; el.addEventListener('click', () => highlight(e.id)); el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); highlight(e.id) } }) }
   cards.appendChild(el);
 }
 document.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   const f = b.dataset.f;
-  document.querySelectorAll('.card').forEach((c) => { c.hidden = f !== 'all' && c.dataset.kind !== f });
+  document.querySelectorAll('.card').forEach((c) => { c.hidden = f === 'added' ? c.dataset.added !== '1' : f !== 'all' && c.dataset.kind !== f });
 }));
 
 // Forces down the side, materials across the top.
@@ -205,6 +322,10 @@ const M = {
   light:     ['', '', '', '', '', '', '', 'Reflects', 'Grows faster', 'Glows', '', 'Blinds; scorches dark things'],
   gravity:   ['Pulls into a floating ball', 'Floats', 'Floats', 'Floats', 'Heaps; packs to stone', 'Pulls loose stone', 'Heaps', '', '', '', 'Gathers', 'Pulls in, or lifts'],
   void:      ['Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Unmade', 'Cells unmade'],
+  shadow:    ['', '', 'Dims its glow', '', '', '', '', '', 'Wilts plants', 'Dims its glow', '', 'Hides you; feeds dark things'],
+  magnetism: ['', '', '', '', '', '', '', 'Pulls or flings it', '', '', '', 'Drags metal ones'],
+  sound:     ['Ripples, splashes', '', '', '', 'Slumps, settles', 'Shakes loose bits down', '', 'Rings', '', 'Shatters', '', 'Stuns; wakes, lures or scares'],
+  time:      ['Slowed: stops; sped: evaporates', 'Slowed: stops', 'Sped: cools to stone', 'Sped: eats faster', '', 'Sped: weathers to sand', '', 'Sped: corrodes', 'Sped: grows, then rots', 'Sped: melts', 'Sped: condenses', 'Slowed or sped up (you too)'],
 };
 const table = document.getElementById('matrix');
 table.innerHTML = `<thead><tr><th scope="col">Force ↓ on →</th>${COLS.map((c) => `<th scope="col">${c}</th>`).join('')}</tr></thead><tbody>${
@@ -242,6 +363,39 @@ const C = [
   ['Storm crystal + water', 'Every so often, the water is electrified.'],
   ['A creature + steam, fire or lava', 'Burned: cells eaten.'],
   ['A creature + Life spring', 'Healed.'],
+  ['Water + dirt', 'Mud.'],
+  ['Mud + heat or time', 'Dries back to dirt.'],
+  ['Clay + water', 'Softens to mud.'],
+  ['Clay + heat', 'Fires into brick.'],
+  ['Salt + water', 'Dissolves; the water is salty: it won\'t freeze and plants won\'t grow in it.'],
+  ['Salt + ice or snow', 'Melts them.'],
+  ['Salt + rot or slime', 'Stops rot; shrivels slime.'],
+  ['Snow + heat', 'Melts to water.'],
+  ['Mist + cold', 'Snow.'],
+  ['Mist', 'Rains out slowly into water.'],
+  ['Wood burning with no air (under sand or dirt)', 'Coal instead of ash.'],
+  ['Wood, plants or coal burning', 'Leave ash.'],
+  ['Ash + a small fire', 'Smothers it.'],
+  ['Ash or blood + dirt', 'Richer soil: plants grow faster.'],
+  ['Seeds + water + dirt', 'Sprout.'],
+  ['Fungus + rot or wood, in the dark', 'Fungus spreads; puffs spores.'],
+  ['Spores + wood, rot or dirt', 'Fungus grows where they land.'],
+  ['Shadow + Life', 'Ectoplasm.'],
+  ['Light + ectoplasm', 'Dispelled.'],
+  ['Heat + lightning together', 'Plasma.'],
+  ['Honey + time', 'Amber.'],
+  ['Swamp gas + spark or flame', 'Explodes.'],
+  ['Spirits + flame', 'A fast, pale blue fire that burns out quickly.'],
+  ['Tar + cold', 'Sets hard.'],
+  ['Thermite + lightning or intense heat', 'Burns through metal and stone.'],
+  ['Void + liquid mana', 'A violent burst that unmakes everything nearby.'],
+  ['Crystal + lightning', 'The arc splits into several.'],
+  ['Crystal + light', 'Stores it and glows.'],
+  ['Mercury + any other liquid', 'Sinks beneath it.'],
+  ['A creature still in quicksand', 'Sinks; moving gets it out slowly.'],
+  ['A creature in slime, honey, tar or mud', 'Slowed (stuck, in honey, if it\'s small).'],
+  ['A creature in mercury', 'Poisoned.'],
+  ['A creature + a liquid mana pool', 'Mana refills.'],
 ];
 const contacts = document.getElementById('contacts');
 contacts.innerHTML = C.map(([a, b]) => `<div class="contact"><b>${a}:</b> ${b}</div>`).join('');

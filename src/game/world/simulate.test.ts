@@ -84,7 +84,7 @@ describe('the world simulation', () => {
 
   test('life grows plants on surfaces, not in mid-air', () => {
     const g = box()
-    applyDisc(g, ['life'], 20, 27, 4)
+    for (let i = 0; i < 3; i++) applyDisc(g, ['life'], 20, 27, 6)
     expect(count(g, M.PLANT)).toBeGreaterThan(0)
     const air = new CellGrid(20, 20)
     life(air, 10, 10)

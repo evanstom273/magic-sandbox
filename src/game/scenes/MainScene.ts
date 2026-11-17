@@ -20,6 +20,7 @@ import { Kind, KIND, Material, MATERIALS, type CellGrid } from '../world/grid.ts
 import { step as simulate, STEPS_PER_SECOND } from '../world/simulate.ts'
 import { buildTestRoom, REST_SPOT, ROOM_H, ROOM_W, SPAWN } from '../world/testRoom.ts'
 import { paintGrid } from '../world/worldTexture.ts'
+import { LIGHTING, LightMap, type LightSource } from '../world/light.ts'
 
 const FOOT_CELL = 3
 
@@ -56,6 +57,10 @@ export class MainScene extends Phaser.Scene {
   private dummies: Dummy[] = []
   private worldTex!: Phaser.Textures.CanvasTexture
   private worldImg!: ImageData
+  private light = new LightMap(ROOM_W, ROOM_H)
+  /** The world's darkness and light; `?light=0` in the address turns it off (all lit). */
+  private lighting = new URLSearchParams(location.search).get('light') !== '0'
+  private lightFrame = 0
   private simAcc = 0
   private player!: PlayerState
   private body!: CellBody
@@ -140,6 +145,7 @@ export class MainScene extends Phaser.Scene {
       w.__runes = () => this.magic.runes.length
       w.__anchors = () => this.magic.anchors.length
       w.__zones = () => this.magic.zones.map((z) => ({ kind: z.kind, x: z.x, y: z.y, r: z.r }))
+      w.__lightAt = (x: number, y: number) => this.light.r[Math.floor(y) * ROOM_W + Math.floor(x)]
       w.__Material = Material
       w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
@@ -435,6 +441,27 @@ export class MainScene extends Phaser.Scene {
     return { submerged: all ? wet / all : 0, drag: wet ? drag / wet : 1, slippery, bouncy, hurt, hurtAt, mana }
   }
 
+  /** Lights in the world this frame: the player's own, cast Light, spells in flight, lightning's charge. */
+  private lightSources(): LightSource[] {
+    const out: LightSource[] = []
+    const add = (x: number, y: number, c: number, k: number) => out.push({ x, y, r: ((c >> 16) & 255) / 255 * k, g: ((c >> 8) & 255) / 255 * k, b: (c & 255) / 255 * k })
+    const p = this.player, P = LIGHTING.player, m = this.magic, W = this.grid.width
+    if (!p || !m) return out // the very first paint, before the player and the magic exist
+    out.push({ x: p.x, y: p.y - PLAYER.height / 2, r: P.r * P.power, g: P.g * P.power, b: P.b * P.power })
+    for (const z of m.zones) if (z.kind === 'light') { const f = Math.min(1, z.life / 0.5) * (1 + z.r / 40); out.push({ x: z.x, y: z.y, r: 1.25 * f, g: 1.2 * f, b: 1.05 * f }) }
+    for (const s of m.projectiles) add(s.x, s.y, elementInfo(s.els[0]).colour, 0.75)
+    for (const s of m.wisps) if (s.els.length) add(s.x, s.y, elementInfo(s.els[0]).colour, 0.6)
+    for (const s of m.motes) add(s.x, s.y, elementInfo(s.els[0]).colour, 0.4)
+    for (const s of m.runes) add(s.x, s.y, elementInfo(s.els[0]).colour, 0.3)
+    for (const f of m.flashes) add(f.x, f.y, f.colour, 0.9 * (f.life / f.max))
+    for (const b of m.beams) {
+      const len = Math.hypot(b.x1 - b.x0, b.y1 - b.y0)
+      for (let t = 0; t <= len; t += 6) add(b.x0 + ((b.x1 - b.x0) * t) / (len || 1), b.y0 + ((b.y1 - b.y0) * t) / (len || 1), b.colour, 0.55)
+    }
+    for (const c of m.charged) add((c.p % W) + 0.5, Math.floor(c.p / W) + 0.5, 0xfff2b0, 1.2 * (c.life / 0.25))
+    return out
+  }
+
   /** Burning, eating and poisoning things eat cells away, a bite at a time. */
   private touchHazards(env: Feel, dt: number): void {
     if (env.hurt <= 0) { this.burnAcc = 0; return }
@@ -491,7 +518,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private paintWorld(): void {
-    paintGrid(this.grid, this.worldImg)
+    if (this.lighting) {
+      const darks = (this.magic?.zones ?? []).filter((z) => z.kind === 'dark').map((z) => ({ x: z.x, y: z.y, radius: z.r, strength: 0.85 * Math.min(1, z.life / 0.5) }))
+      // Light changes slowly next to everything else, so it's worked out every other frame.
+      if (this.lightFrame++ % 2 === 0) this.light.compute(this.grid, this.lightSources(), darks)
+      paintGrid(this.grid, this.worldImg, this.light)
+    } else paintGrid(this.grid, this.worldImg)
     this.worldTex.getContext().putImageData(this.worldImg, 0, 0)
     this.worldTex.refresh()
   }
@@ -688,7 +720,7 @@ export class MainScene extends Phaser.Scene {
     // Stand-in dummies: grey blocks with dot eyes, tinted by what's affecting them.
     for (const d of this.dummies) {
       const left = Math.round(d.x - d.w / 2), top = Math.round(d.y - d.h)
-      const body = d.eaten > 0 ? 0xc03aff : d.frozen > 0 ? 0xa8dcf0 : d.scorched > 0 ? 0xd88a5a : d.stunned > 0 && Math.floor(this.time.now / 80) % 2 ? 0x9ad8c8
+      const body = d.eaten > 0 ? 0xc03aff : d.dazzled > 0 ? 0xf0eee0 : d.frozen > 0 ? 0xa8dcf0 : d.scorched > 0 ? 0xd88a5a : d.stunned > 0 && Math.floor(this.time.now / 80) % 2 ? 0x9ad8c8
         : d.poisoned > 0 ? 0x9aa63a : d.wet > 0 ? 0x7f9fc8 : 0x8a8aa0
       g.fillStyle(INK, 1); g.fillRect(left, top, d.w, d.h)
       g.fillStyle(body, 1); g.fillRect(left + 1, top + 1, d.w - 2, d.h - 2)
@@ -731,6 +763,8 @@ export class MainScene extends Phaser.Scene {
     const now = this.time.now / 1000
     for (const z of this.magic.zones) {
       const fade = Math.min(1, z.life / 0.3)
+      if (z.kind === 'light') { g.fillStyle(0xfff6c8, 0.9 * fade); g.fillRect(Math.floor(z.x) - 1, Math.floor(z.y) - 1, 2, 2); continue } // a mote of light; the light itself shows
+      if (z.kind === 'dark') continue // the darkness shows
       const colour = z.kind === 'pull' ? 0x8a6cff : z.kind === 'magnet' ? 0xff7ab8 : z.kind === 'slow' ? 0xcbb27a : 0xffe6a0
       if (z.kind === 'slow' || z.kind === 'fast') { g.fillStyle(colour, 0.08 * fade); g.fillCircle(z.x, z.y, z.r) }
       const n = Math.max(16, Math.round(z.r * 3))
@@ -746,6 +780,16 @@ export class MainScene extends Phaser.Scene {
           g.fillStyle(colour, 0.8 * fade * (1 - t * 0.5))
           g.fillRect(Math.floor(z.x + Math.cos(a) * rr), Math.floor(z.y + Math.sin(a) * rr), 1, 1)
         }
+      }
+    }
+    // Lightning: the cells it ran through, and its bolts.
+    const W = this.grid.width
+    for (const c of this.magic.charged) { g.fillStyle(0xfff6c0, 0.75 * (c.life / 0.25)); g.fillRect(c.p % W, Math.floor(c.p / W), 1, 1) }
+    for (const b of this.magic.bolts) {
+      g.fillStyle(0xfffbe0, b.life / b.max)
+      for (let i = 0; i + 3 < b.pts.length; i += 2) {
+        const x0 = b.pts[i], y0 = b.pts[i + 1], x1 = b.pts[i + 2], y1 = b.pts[i + 3], len = Math.hypot(x1 - x0, y1 - y0)
+        for (let t = 0; t <= len; t += 0.7) g.fillRect(Math.floor(x0 + ((x1 - x0) * t) / (len || 1)), Math.floor(y0 + ((y1 - y0) * t) / (len || 1)), 1, 1)
       }
     }
     for (const f of this.magic.ripples) {

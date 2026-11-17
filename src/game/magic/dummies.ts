@@ -18,6 +18,7 @@ export class Dummy implements Body {
   wet = 0
   healed = 0
   poisoned = 0
+  dazzled = 0
   stunned = 0
   eaten = 0 // a flash where Void (or worse) took a bite; dummies can't be hurt
   readonly home: { x: number; y: number }
@@ -38,6 +39,7 @@ export class Dummy implements Body {
     else if (f === 'hot') { this.scorched = 1; this.frozen = 0 }
     else if (f === 'wet') this.wet = 3
     else if (f === 'poison') this.poisoned = 3
+    else if (f === 'dazzle') this.dazzled = 2
     else if (f === 'stun') { this.stunned = this.wet > 0 ? 2.5 : 1.2; this.vx = 0 }
   }
 
@@ -47,6 +49,7 @@ export class Dummy implements Body {
     this.wet = Math.max(0, this.wet - dt)
     this.healed = Math.max(0, this.healed - dt)
     this.poisoned = Math.max(0, this.poisoned - dt)
+    this.dazzled = Math.max(0, this.dazzled - dt)
     this.stunned = Math.max(0, this.stunned - dt)
     this.eaten = Math.max(0, this.eaten - dt)
     for (let i = 0; i < 6 && boxHits(solid, this.x, this.y, this.w, this.h); i++) this.y -= 1

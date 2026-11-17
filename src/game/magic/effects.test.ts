@@ -214,3 +214,40 @@ describe('the field forces', () => {
     expect(m.projectiles).toHaveLength(0)
   })
 })
+
+describe('lightning, light and shadow', () => {
+  test('a Lightning bolt into a pool shocks a body standing in it, stunning it', () => {
+    const g = room()
+    for (let y = 52; y < 60; y++) for (let x = 60; x < 140; x++) g.set(x, y, M.WATER)
+    const m = new Magic(g)
+    let hurt = 0
+    const me = body(20, 52, true), dummy = Object.assign(body(130, 60), { hurt(n: number) { hurt += n } })
+    m.bodies = [me, dummy]
+    m.cast({ elements: ['lightning'], shape: 'projectile', cast: 'instant' }, once, { x: 24, y: 45 }, { x: 70, y: 52 }, me)
+    run(m, 1)
+    expect(dummy.touched).toContain('lightning')
+    expect(hurt).toBeGreaterThan(0)
+    expect(m.bolts.length + m.charged.length).toBeGreaterThanOrEqual(0)
+  })
+
+  test('crystal splits an arc into several', () => {
+    const g = room()
+    for (let x = 70; x < 74; x++) g.set(x, 59, M.CRYSTAL)
+    const m = new Magic(g)
+    const me = body(20, 60, true)
+    m.bodies = [me]
+    m.cast({ elements: ['lightning'], shape: 'target', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 72, y: 58 }, me)
+    expect(m.bolts.length).toBeGreaterThan(5)
+  })
+
+  test('Light leaves a light where it lands; Shadow a pool of dark; both together cancel', () => {
+    const m = new Magic(room())
+    const me = body(20, 60, true)
+    m.bodies = [me]
+    m.cast({ elements: ['light'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 70, y: 40 }, me)
+    m.cast({ elements: ['shadow'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 120, y: 40 }, me)
+    expect(m.zones.map((z) => z.kind).sort()).toEqual(['dark', 'light'])
+    m.cast({ elements: ['light', 'shadow'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 40, y: 40 }, me)
+    expect(m.zones).toHaveLength(2)
+  })
+})

@@ -1,12 +1,12 @@
 import { CellGrid, HEAT, Kind, KIND, Material as M } from './grid.ts'
-import { BURNS, EXPLODES, explode, FREEZES, GOLD, ignite, lifeFor, lifeSteps, lightThermite, melt, MELTS, salted, voidBurst } from './reactions.ts'
+import { BURNS, EXPLODES, explode, FREEZES, GLOW, GOLD, ignite, lifeFor, lifeSteps, lightThermite, melt, MELTS, salted, voidBurst, zap } from './reactions.ts'
 
 // How elements act on the world's cells (Element Codex). Substances make material; forces change
 // what's there. Creatures are handled by the magic itself.
 
 export type ElementId =
-  // Forces (Lightning, Light and Shadow still to come)
-  | 'life' | 'heat' | 'cold' | 'force' | 'decay' | 'gravity' | 'void' | 'magnetism' | 'sound' | 'time'
+  // Forces
+  | 'life' | 'heat' | 'cold' | 'lightning' | 'force' | 'decay' | 'light' | 'gravity' | 'void' | 'shadow' | 'magnetism' | 'sound' | 'time'
   // Liquids
   | 'water' | 'oil' | 'lava' | 'acid' | 'slime' | 'mercury' | 'blood' | 'honey' | 'tar' | 'spirits' | 'mana'
   // Gases
@@ -36,18 +36,30 @@ const rnd = Math.random
 /** Forces that work as a field where they land (a well, a magnet, a time bubble): the magic makes those, not the cells. */
 export const FIELD_FORCES: readonly ElementId[] = ['gravity', 'magnetism', 'time']
 
-/** What mixing does before anything is cast (Element Codex): Life and Decay cancel where they meet, so a spell of both does neither. */
+/**
+ * What mixing does before anything is cast (Element Codex): Life and Decay cancel where they meet,
+ * as do Light and Shadow; Shadow and Life make ectoplasm; Heat and Lightning together make plasma.
+ */
 export function mix(els: readonly ElementId[]): ElementId[] {
-  if (els.includes('life') && els.includes('decay')) return els.filter((e) => e !== 'life' && e !== 'decay')
-  return [...els]
+  let out = [...els]
+  const has = (e: ElementId) => out.includes(e)
+  if (has('life') && has('decay')) out = out.filter((e) => e !== 'life' && e !== 'decay')
+  if (has('light') && has('shadow')) out = out.filter((e) => e !== 'light' && e !== 'shadow')
+  if (has('shadow') && has('life')) out = [...out.filter((e) => e !== 'shadow' && e !== 'life'), 'ectoplasm']
+  if (has('heat') && has('lightning')) out.push('plasma')
+  return out
 }
 
+/** Forces that strike at a point (the magic runs them), rather than acting on each cell of a disc. */
+export const STRIKES: readonly ElementId[] = ['lightning']
+
 /** How an element feels to a creature it touches, for the stand-in dummies: burning, freezing, wetting, poisoning, stunning. */
-export function feel(el: ElementId): 'hot' | 'cold' | 'wet' | 'poison' | 'stun' | undefined {
+export function feel(el: ElementId): 'hot' | 'cold' | 'wet' | 'poison' | 'stun' | 'dazzle' | undefined {
   if (el === 'heat') return 'hot'
   if (el === 'cold') return 'cold'
   if (el === 'decay') return 'poison'
-  if (el === 'sound') return 'stun'
+  if (el === 'sound' || el === 'lightning') return 'stun'
+  if (el === 'light') return 'dazzle'
   const s = SUBSTANCE[el]
   if (s === undefined) return undefined
   if (HEAT[s] > 0) return 'hot'
@@ -147,6 +159,28 @@ export function unmake(g: CellGrid, x: number, y: number): void {
   g.set(x, y, M.EMPTY)
 }
 
+/** Light on one cell: glass and ice glow a while (crystal stores it longer), plants glow (glow-moss) and grow faster, ectoplasm is dispelled. */
+export function light(g: CellGrid, x: number, y: number): void {
+  if (!g.inside(x, y)) return
+  const m = g.get(x, y), p = y * g.width + x
+  if (m === M.GLASS || m === M.ICE || m === M.CRYSTAL) g.life[p] = lifeSteps(m === M.CRYSTAL ? 60 : 12)
+  else if (m === M.PLANT) {
+    if (rnd() < 0.3) g.life[p] |= GLOW
+    if (rnd() < 0.15) life(g, x, y)
+  } else if (m === M.ECTOPLASM) g.set(x, y, M.EMPTY)
+}
+
+/** Shadow on one cell: snuffs glows (crystal, glass, ice, glow-moss) and makes plants wilt. */
+export function shadow(g: CellGrid, x: number, y: number): void {
+  if (!g.inside(x, y)) return
+  const m = g.get(x, y), p = y * g.width + x
+  if (m === M.GLASS || m === M.ICE || m === M.CRYSTAL) g.life[p] = 0
+  else if (m === M.PLANT) {
+    if (g.life[p] & GLOW) g.life[p] &= ~GLOW
+    else if (rnd() < 0.3) g.set(x, y, M.EMPTY)
+  }
+}
+
 const BRITTLE: Partial<Record<number, number>> = { [M.GLASS]: M.SAND, [M.ICE]: M.SNOW, [M.CRYSTAL]: M.EMPTY, [M.BONE]: M.EMPTY }
 
 /** Sound on one cell: shatters glass, ice, crystal and bone; shakes bits loose from ceilings; slumps loose stuff. */
@@ -221,6 +255,9 @@ export function applyToCell(g: CellGrid, el: ElementId, x: number, y: number, su
   else if (el === 'cold') cold(g, x, y)
   else if (el === 'life') life(g, x, y)
   else if (el === 'decay') decay(g, x, y)
+  else if (el === 'lightning') zap(g, x, y, 0.3)
+  else if (el === 'light') light(g, x, y)
+  else if (el === 'shadow') shadow(g, x, y)
   else if (el === 'void') unmake(g, x, y)
   else if (el === 'sound') sound(g, x, y)
 }
@@ -229,7 +266,7 @@ export function applyToCell(g: CellGrid, el: ElementId, x: number, y: number, su
 export function applyDisc(g: CellGrid, els: readonly ElementId[], cx: number, cy: number, r: number, strength = 1, sustained = false): void {
   for (const el of els) {
     if (el === 'force') { push(g, cx, cy, r, strength); continue }
-    if (FIELD_FORCES.includes(el)) continue
+    if (FIELD_FORCES.includes(el) || STRIKES.includes(el)) continue
     const fill = SUBSTANCE[el] !== undefined ? 0.75 : el === 'void' ? 1 : 0.9 // Void digs clean holes
     for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
       for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {

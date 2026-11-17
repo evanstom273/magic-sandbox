@@ -203,7 +203,7 @@ describe('when materials meet (Element Codex)', () => {
     expect(count(g, M.SPIRITS)).toBe(0)
     const h = box()
     fill(h, M.HONEY, 1, 39, 27, 29)
-    for (let i = 0; i < 4; i++) applyDisc(h, ['heat'], 20, 28, 6)
+    applyDisc(h, ['heat'], 20, 28, 6) // once: more heat would melt the amber back to honey (and burn it)
     expect(count(h, M.AMBER)).toBeGreaterThan(0)
   })
 

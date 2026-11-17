@@ -19,6 +19,7 @@ const ACTIVE = new Uint8Array(INFO.length)
 for (const m of [
   M.WATER, M.SALT_WATER, M.ACID, M.LAVA, M.MOLTEN, M.PLASMA, M.BURNING_THERMITE, M.ROT, M.PLANT, M.FUNGUS,
   M.SPORES, M.SEEDS, M.SALT, M.MUD, M.SPIRITS, M.MIST, M.STEAM, M.ASH, M.BLOOD, M.GUNPOWDER,
+  M.GLASS, M.ICE, M.CRYSTAL,
 ]) ACTIVE[m] = 1
 
 /** What acid eats, and how fast (a second, touching). Obsidian, glass and gold hold it. */
@@ -329,6 +330,11 @@ function react(g: CellGrid, x: number, y: number, p: number, m: number): boolean
       }
       return false
     }
+    case M.GLASS:
+    case M.ICE:
+    case M.CRYSTAL:
+      if (g.life[p]) g.life[p]-- // a glow from Light, fading
+      return false
     case M.GUNPOWDER: {
       const l = g.life[p]
       if (!(l & LIT)) return false

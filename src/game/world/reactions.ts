@@ -18,6 +18,8 @@ export const BLUE = 0x4000
 export const GOLD = 0x4000
 /** Gunpowder: lit by a blast, it fizzes for a moment, then goes off. */
 export const LIT = 0x8000
+/** Plants: glow-moss, where Life and Light have met. */
+export const GLOW = 0x4000
 /** Dirt: richer soil, with ash or blood worked into it. Plants grow faster on it. */
 export const RICH = 1
 /** The timer part of a cell's life. */
@@ -106,6 +108,52 @@ export const SHATTERS: Partial<Record<number, number>> = {
   [M.FROZEN_QUICKSAND]: M.QUICKSAND,
   [M.BONE]: M.EMPTY,
   [M.BRICK]: M.RUBBLE, // only near the middle of a blast
+}
+
+/** What lightning runs through: water and anything watery, and metals. */
+const CONDUCTORS = new Set<number>([M.WATER, M.SALT_WATER, M.ACID, M.METAL, M.MERCURY, M.GOLD, M.MOLTEN, M.BLOOD, M.MANA, M.MUD])
+export const conducts = (m: number) => CONDUCTORS.has(m)
+
+/** A spark on one cell: explosives always go off and thermite always lights; flammables catch and sand fuses to glass by `chance`. */
+export function zap(g: CellGrid, x: number, y: number, chance = 0.5): void {
+  if (!g.inside(x, y)) return
+  const m = g.get(x, y)
+  const ex = EXPLODES[m]
+  if (ex) { explode(g, x, y, ex.r); return } // any spark sets them off
+  if (m === M.THERMITE) { lightThermite(g, x, y); return }
+  if (BURNS[m]) { if (rnd() < chance) ignite(g, x, y, m); return }
+  if (m === M.SAND && rnd() < chance) g.set(x, y, M.GLASS)
+}
+
+/**
+ * Lightning striking at (x, y): it fuses and sparks where it lands, then runs through everything
+ * conducting that it touches (a whole pool, a length of metal), up to `limit` cells, sparking now
+ * and then beside it. Returns the cells it charged, and any crystals it met (which split it).
+ */
+export function electrify(g: CellGrid, x: number, y: number, limit = 600): { charged: number[]; crystals: number[] } {
+  const W = g.width, seen = new Set<number>(), charged: number[] = [], crystals: number[] = []
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    const cx = x + dx, cy = y + dy
+    if (!g.inside(cx, cy) || dx * dx + dy * dy > 6) continue
+    const m = g.get(cx, cy), p = cy * W + cx
+    if (conducts(m)) { if (!seen.has(p)) { seen.add(p); charged.push(p) } }
+    else if (m === M.CRYSTAL) crystals.push(p)
+    else zap(g, cx, cy, 0.6)
+  }
+  for (let i = 0; i < charged.length && charged.length < limit; i++) {
+    const p = charged[i], px = p % W, py = (p - px) / W
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = px + dx, ny = py + dy
+      if (!g.inside(nx, ny)) continue
+      const q = ny * W + nx, m = g.cells[q]
+      if (seen.has(q)) continue
+      seen.add(q)
+      if (conducts(m)) charged.push(q)
+      else if (m === M.CRYSTAL) crystals.push(q)
+      else if (m !== M.EMPTY) zap(g, nx, ny, 0.05)
+    }
+  }
+  return { charged, crystals }
 }
 
 /** Salt beside it: salt stops rot and decay where it's scattered. */

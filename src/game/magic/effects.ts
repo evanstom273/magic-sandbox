@@ -1,6 +1,7 @@
 import { applyDisc, applyToCell, FIELD_FORCES, mix, push, SUBSTANCE, type ElementId } from '../world/elements.ts'
 import { boxHits } from '../player/movement.ts'
 import { CellGrid, Kind, KIND, Material as M } from '../world/grid.ts'
+import { electrify } from '../world/reactions.ts'
 import type { CastEvent } from './caster.ts'
 import { elementInfo, type FollowUp, type Spell, type TriggerKind } from './spells.ts'
 
@@ -26,7 +27,9 @@ export interface Body {
  * A field a spell leaves where it lands, for a while: a gravity well, a magnet, or a bubble of
  * slowed or sped-up time. The simulation honours them (grid.fields); wells pull bodies in too.
  */
-export interface Zone { kind: 'pull' | 'magnet' | 'slow' | 'fast'; x: number; y: number; r: number; life: number; max: number; owner?: Body }
+export interface Zone { kind: 'pull' | 'magnet' | 'slow' | 'fast' | 'light' | 'dark'; x: number; y: number; r: number; life: number; max: number; owner?: Body }
+/** A lightning bolt as drawn: a jagged line, briefly. */
+export interface Bolt { pts: number[]; life: number; max: number }
 
 /** A trigger waiting to set off its follow-up spell (#17, #32), riding on something or sitting at a point. */
 export interface Trig {
@@ -77,6 +80,8 @@ export class Magic {
   readonly anchors: Anchor[] = []
   readonly zones: Zone[] = []
   readonly ripples: Flash[] = [] // Sound's shockwaves, drawn as rings spreading out
+  readonly bolts: Bolt[] = []
+  readonly charged: { p: number; life: number }[] = [] // cells lightning has just run through
   private beamEnds = new Map<number, { x: number; y: number; dir: { x: number; y: number } }>()
   private beamSlot = -1
   bodies: Body[] = []
@@ -285,6 +290,7 @@ export class Magic {
       } else applyDisc(this.grid, [el], end.x, end.y, 2.5, 1, true)
     }
     this.fields(els, end.x, end.y, 4, true, caster)
+    if (els.includes('light') && rnd() < 0.06) applyToCell(this.grid, 'heat', Math.floor(end.x), Math.floor(end.y)) // a held beam of Light warms what it hits
     if (hitBody) { this.touchBody(hitBody, els, dir.x * 600 * dt, dir.y * 600 * dt, 14 * dt); this.eat(hitBody, els, true, dt) }
     this.beams.push({ x0: tip.x, y0: tip.y, x1: x, y1: y, colour: elementInfo(els[0]).colour })
     this.beamEnds.set(this.beamSlot, { x, y, dir })
@@ -318,6 +324,47 @@ export class Magic {
     if (els.includes('magnetism')) this.zone('magnet', x, y, r * 1.4 + 6, life(3 + r / 4), owner)
     if (els.includes('time')) this.zone(els.includes('life') ? 'fast' : 'slow', x, y, r + 6, life(5 + r / 3))
     if (els.includes('sound') && (!sustained || rnd() < 0.15)) this.ripples.push({ x, y, r: r * 1.6 + 6, life: 0.45, max: 0.45, colour: 0x9ad8c8 })
+    if (els.includes('light')) this.zone('light', x, y, r + 14, life(14 + r))
+    if (els.includes('shadow')) this.zone('dark', x, y, r + 6, life(10 + r / 2))
+    if (els.includes('lightning') && (!sustained || rnd() < 0.12)) this.strike(x, y, Math.max(0.6, r / 8))
+  }
+
+  /**
+   * Lightning: it runs through whatever conducts where it lands (a pool, a length of metal) and
+   * sparks around it; anything touching the charge is shocked (wet dummies for longer; the caster
+   * too, standing in the pool they struck). Crystal splits it into several arcs.
+   */
+  private strike(x: number, y: number, s: number, depth = 0): void {
+    const g = this.grid, W = g.width
+    const { charged, crystals } = electrify(g, Math.floor(x), Math.floor(y), Math.round(500 * Math.min(1.6, s)))
+    for (const p of charged) this.charged.push({ p, life: 0.25 })
+    if (this.charged.length > 1500) this.charged.splice(0, this.charged.length - 1500)
+    // Bolts out to a few of the charged cells (or just crackling, if there's nothing to run along).
+    const ends = charged.length ? Array.from({ length: Math.min(5, charged.length) }, () => charged[(rnd() * charged.length) | 0]).map((p) => ({ x: (p % W) + 0.5, y: Math.floor(p / W) + 0.5 }))
+      : Array.from({ length: 3 }, () => ({ x: x + (rnd() - 0.5) * 12, y: y + (rnd() - 0.5) * 12 }))
+    for (const e of ends) this.bolts.push({ pts: jagged(x, y, e.x, e.y), life: 0.18, max: 0.18 })
+    this.flashes.push({ x, y, r: 5, life: 0.15, max: 0.15, colour: 0xfff27a })
+    const hot = new Set(charged)
+    for (const b of this.bodies) {
+      let shocked = Math.hypot(b.x - x, b.y - b.h / 2 - y) < 5
+      for (let cy = Math.floor(b.y - b.h) - 1; !shocked && cy <= Math.floor(b.y); cy++) {
+        for (let cx = Math.floor(b.x - b.w / 2) - 1; cx <= Math.ceil(b.x + b.w / 2); cx++) if (hot.has(cy * W + cx)) { shocked = true; break }
+      }
+      if (!shocked) continue
+      b.affect?.('lightning')
+      b.hurt?.(10 * s)
+    }
+    // Crystal splits the arc into several, out in all directions.
+    if (depth > 0) return
+    for (const c of crystals.slice(0, 3)) {
+      const cx = (c % W) + 0.5, cy = Math.floor(c / W) + 0.5
+      for (let k = 0; k < 3; k++) {
+        const a = rnd() * Math.PI * 2
+        const end = this.firstSurface({ x: cx + Math.cos(a) * 2, y: cy + Math.sin(a) * 2 }, { x: cx + Math.cos(a) * 18, y: cy + Math.sin(a) * 18 })
+        this.bolts.push({ pts: jagged(cx, cy, end.x, end.y), life: 0.2, max: 0.2 })
+        this.strike(end.x, end.y, s * 0.6, depth + 1)
+      }
+    }
   }
 
   /** A field at (x, y), or an existing one of its kind near there kept going (held spells, wisps). */
@@ -351,8 +398,9 @@ export class Magic {
     }
     const g = this.grid
     g.field.fill(0)
-    g.fields = this.zones.map((z) => ({ kind: z.kind, x: z.x, y: z.y, r: z.r }))
-    this.zones.forEach((z, i) => {
+    const sim = this.zones.filter((z) => z.kind !== 'light' && z.kind !== 'dark')
+    g.fields = sim.map((z) => ({ kind: z.kind as 'pull', x: z.x, y: z.y, r: z.r }))
+    sim.forEach((z, i) => {
       for (let y = Math.max(0, Math.floor(z.y - z.r)); y <= Math.min(g.height - 1, Math.ceil(z.y + z.r)); y++) {
         for (let x = Math.max(0, Math.floor(z.x - z.r)); x <= Math.min(g.width - 1, Math.ceil(z.x + z.r)); x++) {
           if ((x + 0.5 - z.x) ** 2 + (y + 0.5 - z.y) ** 2 <= z.r * z.r) g.field[y * g.width + x] = i + 1
@@ -505,6 +553,9 @@ export class Magic {
     this.updateTriggers(dt)
     this.updateZones(dt)
     for (let i = this.ripples.length - 1; i >= 0; i--) { this.ripples[i].life -= dt; if (this.ripples[i].life <= 0) this.ripples.splice(i, 1) }
+    for (let i = this.bolts.length - 1; i >= 0; i--) { this.bolts[i].life -= dt; if (this.bolts[i].life <= 0) this.bolts.splice(i, 1) }
+    for (const c of this.charged) c.life -= dt
+    while (this.charged.length && this.charged[0].life <= 0) this.charged.shift()
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i]
       p.age += dt
@@ -644,4 +695,17 @@ export class Magic {
       if (w.r >= w.max) this.waves.splice(i, 1)
     }
   }
+}
+
+/** A jagged line from (x0, y0) to (x1, y1), as flat [x, y, x, y, ...] points: lightning. */
+function jagged(x0: number, y0: number, x1: number, y1: number): number[] {
+  const len = Math.hypot(x1 - x0, y1 - y0), n = Math.max(2, Math.round(len / 4))
+  const nx = -(y1 - y0) / (len || 1), ny = (x1 - x0) / (len || 1)
+  const pts = [x0, y0]
+  for (let i = 1; i < n; i++) {
+    const t = i / n, off = (Math.random() - 0.5) * Math.min(6, len * 0.3)
+    pts.push(x0 + (x1 - x0) * t + nx * off, y0 + (y1 - y0) * t + ny * off)
+  }
+  pts.push(x1, y1)
+  return pts
 }

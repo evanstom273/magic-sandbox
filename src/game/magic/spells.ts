@@ -7,8 +7,8 @@ import type { ElementId } from '../world/elements.ts'
 export type ElementKind = 'force' | 'liquid' | 'gas' | 'solid' | 'made'
 export interface ElementInfo { id: ElementId; name: string; kind: ElementKind; colour: number; cost: number }
 
-// Every castable element so far (#79 the first six; the rest from the codex). Fire isn't castable
-// (the codex: Heat on anything flammable makes it). Costs are Claude's, to tune: common stuff is
+// Every element in the codex, all castable (#79 the first six; the rest from the codex; Fire too, #86).
+// Costs are Claude's, to tune: common stuff is
 // cheap, dangerous or rare stuff dear (obsidian, plasma, thermite, gold, and liquid mana, which
 // gives back less than it costs).
 const el = (id: ElementId, name: string, kind: ElementKind, colour: number, cost: number): ElementInfo => ({ id, name, kind, colour, cost })
@@ -55,6 +55,7 @@ export const ELEMENTS: ElementInfo[] = [
   el('seeds', 'Seeds', 'solid', 0xa08a4a, 4),
   el('thermite', 'Thermite', 'solid', 0x8a3a3a, 8),
   el('quicksand', 'Quicksand', 'solid', 0xd0a860, 5),
+  el('fire', 'Fire', 'made', 0xffb03a, 5),
   el('steam', 'Steam', 'made', 0xc8d0dc, 4),
   el('smoke', 'Smoke', 'made', 0x4a4a56, 3),
   el('ice', 'Ice', 'made', 0xa8dcf0, 5),

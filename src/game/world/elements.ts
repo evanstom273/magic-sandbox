@@ -15,11 +15,12 @@ export type ElementId =
   | 'sand' | 'stone' | 'gunpowder' | 'metal' | 'dirt' | 'clay' | 'salt' | 'snow' | 'coal' | 'crystal' | 'gold'
   | 'bone' | 'fungus' | 'seeds' | 'thermite' | 'quicksand'
   // Made by reactions (castable once drawn in; drawing in isn't built, so they're open for now)
-  | 'steam' | 'smoke' | 'ice' | 'obsidian' | 'glass' | 'rubble' | 'molten' | 'plants' | 'rot' | 'mud'
+  | 'fire' | 'steam' | 'smoke' | 'ice' | 'obsidian' | 'glass' | 'rubble' | 'molten' | 'plants' | 'rot' | 'mud'
   | 'spores' | 'plasma' | 'brick' | 'ash' | 'ectoplasm' | 'amber'
 
-/** The material each substance makes. Fire isn't here: the codex says it can't be cast. */
+/** The material each substance makes. */
 export const SUBSTANCE: Partial<Record<ElementId, M>> = {
+  fire: M.FIRE, // loose flames (#86)
   water: M.WATER, oil: M.OIL, lava: M.LAVA, acid: M.ACID, slime: M.SLIME, mercury: M.MERCURY, blood: M.BLOOD,
   honey: M.HONEY, tar: M.TAR, spirits: M.SPIRITS, mana: M.MANA,
   swampgas: M.SWAMP_GAS, mist: M.MIST,
@@ -249,6 +250,8 @@ export function push(g: CellGrid, cx: number, cy: number, r: number, strength: n
 
 /** One element on one cell (the push for Force is done over a region, by `push`). */
 export function applyToCell(g: CellGrid, el: ElementId, x: number, y: number, sustained = false): void {
+  // Fire sets alight anything flammable it lands on, and is loose flames in the open.
+  if (el === 'fire' && BURNS[g.get(x, y)]) { ignite(g, x, y); return }
   const sub = SUBSTANCE[el]
   if (sub !== undefined) { place(g, x, y, sub); return }
   if (el === 'heat') heat(g, x, y, sustained)

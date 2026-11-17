@@ -373,7 +373,7 @@ Colour: `#4a4a56`
 Colour: `#ffb03a`
 
 - **In the world:** Burning cells. Spreads along wood, plants and oil; rises; dies to smoke; water puts it out.
-- **Cast:** Not cast directly: Heat on anything flammable makes it.
+- **Cast:** Makes fire: loose flames that lick upwards, burn out fast and set alight anything flammable they touch. (Heat on anything flammable makes it too.)
 - **Draw it in from:** Gives Heat.
 
 #### Ice

@@ -242,3 +242,14 @@ describe('when materials meet (Element Codex)', () => {
     expect(count(g, M.WATER)).toBeGreaterThan(5)
   })
 })
+
+test('cast Fire is loose flames: they rise, burn out, and set alight what they touch', () => {
+  const g = new CellGrid(40, 30)
+  for (let y = 0; y < 30; y++) for (let x = 0; x < 40; x++) if (x === 0 || x === 39 || y === 29) g.set(x, y, M.STONE)
+  for (let x = 5; x < 35; x++) g.set(x, 28, M.WOOD)
+  applyDisc(g, ['fire'], 20, 26, 3)
+  expect(g.cells.filter((c) => c === M.FIRE).length).toBeGreaterThan(5)
+  for (let i = 0; i < 20 * STEPS_PER_SECOND; i++) step(g)
+  expect(g.cells.filter((c) => c === M.WOOD).length).toBe(0) // the flames caught the wood, and it all burned
+  expect(g.cells.filter((c) => c === M.FIRE).length).toBe(0)
+})

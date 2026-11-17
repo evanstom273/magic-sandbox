@@ -177,7 +177,7 @@
    "kind": "made",
    "colour": "#ffb03a",
    "world": "Burning cells. Spreads along wood, plants and oil; rises; dies to smoke; water puts it out.",
-   "cast": "Not cast directly: Heat on anything flammable makes it.",
+   "cast": "Makes fire: loose flames that lick upwards, burn out fast and set alight anything flammable they touch. (Heat on anything flammable makes it too.)",
    "draw": "Gives Heat."
   },
   {

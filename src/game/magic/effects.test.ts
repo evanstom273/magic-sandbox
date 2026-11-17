@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { CellGrid, Material as M } from '../world/grid.ts'
 import { Magic, type Body } from './effects.ts'
-import type { Spell } from './spells.ts'
+import { castCost, withSize, type Spell } from './spells.ts'
 
 /** A room: stone floor at y = 60, open above. */
 function room() {
@@ -249,5 +249,39 @@ describe('lightning, light and shadow', () => {
     expect(m.zones.map((z) => z.kind).sort()).toEqual(['dark', 'light'])
     m.cast({ elements: ['light', 'shadow'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 40, y: 40 }, me)
     expect(m.zones).toHaveLength(2)
+  })
+})
+
+describe('spell size', () => {
+  const water = (g: CellGrid) => g.cells.filter((c) => c === M.WATER).length
+  test('a bigger spell reaches further: a bigger burst, a wider AoE', () => {
+    const small = new Magic(room()), big = new Magic(room())
+    const me = body(20, 60, true)
+    small.bodies = [me]; big.bodies = [me]
+    small.cast({ elements: ['water'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 80, y: 35 }, me)
+    big.cast({ elements: ['water'], shape: 'aoe', cast: 'instant', size: 2.5 }, once, { x: 24, y: 50 }, { x: 80, y: 35 }, me)
+    expect(water(big.grid)).toBeGreaterThan(water(small.grid) * 4)
+    const bolt = new Magic(room())
+    bolt.bodies = [me]
+    bolt.cast({ elements: ['water'], shape: 'projectile', cast: 'instant', size: 3 }, once, { x: 24, y: 50 }, { x: 100, y: 50 }, me)
+    expect(bolt.projectiles[0].size).toBe(3)
+    run(bolt, 2)
+    expect(water(bolt.grid)).toBeGreaterThan(400)
+  })
+
+  test('size does not change what a spell costs', () => {
+    const spell: Spell = { elements: ['lava', 'void'], shape: 'aoe', cast: 'charged' }
+    expect(castCost({ ...spell, size: 5 }, 1.6)).toBe(castCost(spell, 1.6))
+    expect(withSize(spell, 9).size).toBe(5)
+    expect(withSize(spell, 0.1).size).toBe(0.5)
+  })
+
+  test('a trigger follow-up is as big as the spell that set it off', () => {
+    const m = new Magic(room())
+    const me = body(20, 60, true)
+    m.bodies = [me]
+    m.cast({ elements: ['heat'], shape: 'projectile', cast: 'instant', size: 2, trigger: { kind: 'impact', then: { elements: ['water'], shape: 'aoe' } } }, once, { x: 24, y: 50 }, { x: 100, y: 58 }, me)
+    run(m, 2)
+    expect(water(m.grid)).toBeGreaterThan(300) // a ×2 AoE of water
   })
 })

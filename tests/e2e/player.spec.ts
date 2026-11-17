@@ -116,3 +116,44 @@ test('standing in liquid mana soaks the pool up into your mana; lava eats the bo
   await expect.poll(() => page.evaluate(() => (window as unknown as W).__health().marks), { timeout: 3000 }).toContain('burn')
   expect(await page.evaluate(() => (window as unknown as W).__health().value)).toBeLessThan(100)
 })
+
+test('the cheat menu: invulnerable and infinite mana', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __hurt?: unknown }).__hurt === 'function')
+  type W = { __hurt(n: number): void; __health: () => { value: number }; __magic: () => { mana: number }; __setMana(n: number): void }
+  await page.getByRole('button', { name: 'Cheats' }).dispatchEvent('pointerdown')
+  const menu = page.getByRole('dialog', { name: 'Cheats' })
+  await menu.getByRole('switch', { name: 'Invulnerable' }).click()
+  await expect(menu.getByRole('switch', { name: 'Invulnerable' })).toHaveAttribute('aria-checked', 'true')
+  await menu.getByRole('switch', { name: 'Infinite mana' }).click()
+  await page.keyboard.press('c') // C closes it
+  await expect(menu).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Cheats, on: Invulnerable, Infinite mana' })).toBeVisible() // lit up
+
+  await page.evaluate(() => (window as unknown as W).__hurt(60))
+  expect(await page.evaluate(() => (window as unknown as W).__health().value)).toBe(100)
+  expect(await page.evaluate(() => (window as unknown as W).__magic().mana)).toBe(100) // topped up
+  await page.mouse.move(700, 300)
+  for (let i = 0; i < 5; i++) { await page.mouse.down(); await page.waitForTimeout(40); await page.mouse.up(); await page.waitForTimeout(60) }
+  expect(await page.evaluate(() => (window as unknown as W).__magic().mana)).toBe(100) // casting spends nothing
+
+  await page.keyboard.press('c') // C opens it too
+  await menu.getByRole('switch', { name: 'Invulnerable' }).click()
+  await menu.getByRole('button', { name: 'Done' }).click()
+  await page.evaluate(() => (window as unknown as W).__hurt(30))
+  expect(await page.evaluate(() => (window as unknown as W).__health().value)).toBe(70)
+})
+
+test('menu keys open and close their menus again and again', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __hurt?: unknown }).__hurt === 'function')
+  for (const [key, name] of [['c', 'Cheats'], ['g', 'Guide'], ['b', 'Spell builder']]) {
+    const menu = page.getByRole('dialog', { name })
+    for (let i = 0; i < 2; i++) {
+      await page.keyboard.press(key)
+      await expect(menu).toBeVisible()
+      await page.keyboard.press(key)
+      await expect(menu).toHaveCount(0)
+    }
+  }
+})

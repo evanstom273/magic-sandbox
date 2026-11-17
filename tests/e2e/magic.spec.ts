@@ -227,3 +227,17 @@ test('the guide to combining elements: search an element, two together, and it p
   await page.keyboard.press('g')
   await expect(guide).toHaveCount(0)
 })
+
+test('the Size slider makes a spell bigger without changing its cost', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __magic?: unknown }).__magic === 'function')
+  await page.getByRole('button', { name: 'Spells' }).dispatchEvent('pointerdown')
+  const builder = page.getByRole('dialog', { name: 'Spell builder' })
+  await builder.getByRole('button', { name: 'Slot 1' }).click()
+  const costBefore = await builder.getByText(/Costs/).textContent()
+  await builder.getByRole('slider', { name: 'Size' }).fill('3')
+  await expect(builder).toContainText('size ×3')
+  expect((await builder.getByText(/Costs/).textContent())!.replace(', size ×3', '')).toBe(costBefore)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /Spell 1: Water Projectile, Instant, ×3/ })).toBeVisible()
+})

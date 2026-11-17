@@ -1,4 +1,5 @@
 import { PhaserGame } from './game/PhaserGame.tsx'
+import { CheatMenu } from './ui/CheatMenu.tsx'
 import { DeathPrompt } from './ui/DeathPrompt.tsx'
 import { Guide } from './ui/Guide.tsx'
 import { HealthBar } from './ui/HealthBar.tsx'
@@ -18,6 +19,7 @@ export default function App() {
       <DeathPrompt />
       <SpellBuilder />
       <Guide />
+      <CheatMenu />
       <TouchControls />
     </main>
   )

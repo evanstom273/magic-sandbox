@@ -10,7 +10,7 @@ function Bar({ label, value, max, fill, trail }: { label: string; value: number;
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={Math.round(value)}
-      className="relative h-3.5 w-44 overflow-hidden rounded-[3px] border-2 border-[#1a1a26] bg-[#2a2a3a]"
+      className="relative h-3.5 w-44 overflow-hidden max-[480px]:w-32 rounded-[3px] border-2 border-[#1a1a26] bg-[#2a2a3a]"
     >
       {trail && <div className="absolute inset-y-0 left-0 transition-[width] delay-300 duration-500 ease-out" style={{ width: `${pct}%`, background: trail }} />}
       <div className="absolute inset-y-0 left-0" style={{ width: `${pct}%`, background: fill }} />

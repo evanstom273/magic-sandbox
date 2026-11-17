@@ -2,8 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { hud, spellEdits } from '../game/bridge.ts'
 import { touchInput } from '../game/input/touchInput.ts'
 import {
-  CAST_HELP, CAST_TYPES, castCost, channelCost, ELEMENTS, FOLLOW_UP_SHAPES, SHAPE_HELP, SHAPES, STAND_IN_CAPACITY, TRIGGER_HELP, TRIGGERS,
-  toggleElement, withFollowUp, withShape, withTrigger, type ElementKind, type Spell,
+  CAST_HELP, CAST_TYPES, castCost, channelCost, ELEMENTS, FOLLOW_UP_SHAPES, SHAPE_HELP, SHAPES, SIZE, sizeOf, STAND_IN_CAPACITY, TRIGGER_HELP, TRIGGERS,
+  toggleElement, withFollowUp, withShape, withSize, withTrigger, type ElementKind, type Spell,
 } from '../game/magic/spells.ts'
 import type { ElementId } from '../game/world/elements.ts'
 
@@ -115,7 +115,7 @@ export function SpellBuilder() {
     const onKey = (e: KeyboardEvent) => {
       // Typing in a search box is typing, not B for close (the box handles its own Escape first).
       if (e.target instanceof HTMLInputElement && e.key !== 'Escape') return
-      if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') { e.preventDefault(); close() }
+      if (!e.repeat && (e.key === 'Escape' || e.key === 'b' || e.key === 'B')) { e.preventDefault(); close() }
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
@@ -166,6 +166,23 @@ export function SpellBuilder() {
           ))}
         </Section>
 
+        <Section title="Size" note="How big its effect is: the burst, the reach, the spread. It doesn't change the cost.">
+          <div className="flex w-full items-center gap-3">
+            <input
+              type="range"
+              min={SIZE.min}
+              max={SIZE.max}
+              step={SIZE.step}
+              value={sizeOf(spell)}
+              onChange={(e) => set(withSize(spell, Number(e.target.value)))}
+              aria-label="Size"
+              aria-valuetext={`×${sizeOf(spell)}`}
+              className="h-6 flex-1 accent-[#8fd3ff]"
+            />
+            <span className="w-11 text-right text-[14px] font-semibold tabular-nums">×{sizeOf(spell)}</span>
+          </div>
+        </Section>
+
         <Section title="Trigger" note={spell.trigger ? TRIGGER_HELP[spell.trigger.kind] : 'Optional: sets off a second spell from wherever this one got to.'}>
           <Chip on={!spell.trigger} onClick={() => set(withTrigger(spell, null))}>None</Chip>
           {TRIGGERS.map((t) => <Chip key={t.id} on={spell.trigger?.kind === t.id} onClick={() => set(withTrigger(spell, t.id))}>{t.name}</Chip>)}
@@ -194,7 +211,7 @@ export function SpellBuilder() {
         )}
 
         <p className="m-0 rounded-md border border-[#2c2f45] bg-[#14151f] px-3 py-2 text-[13px] text-white/75">
-          <strong className="text-white">{spell.elements.map((e) => ELEMENTS.find((x) => x.id === e)!.name).join(' + ')} {shape.name}</strong>, {spell.cast}
+          <strong className="text-white">{spell.elements.map((e) => ELEMENTS.find((x) => x.id === e)!.name).join(' + ')} {shape.name}</strong>, {spell.cast}{sizeOf(spell) !== 1 && <>, size ×{sizeOf(spell)}</>}
           {spell.trigger && <>, {TRIGGERS.find((t) => t.id === spell.trigger!.kind)!.name.toLowerCase()}, then <strong className="text-white">{spell.trigger.then.elements.map((e) => ELEMENTS.find((x) => x.id === e)!.name).join(' + ')} {SHAPES.find((s) => s.id === spell.trigger!.then.shape)!.name}</strong></>}
           . Costs {cost}{spell.trigger && spell.cast === 'channeled' ? ', plus the follow-up when it goes off' : ''}.
         </p>

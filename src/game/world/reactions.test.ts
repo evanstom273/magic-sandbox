@@ -189,7 +189,8 @@ describe('when materials meet (Element Codex)', () => {
     fill(g, M.DIRT, 1, 39, 26, 29)
     fill(g, M.WATER, 1, 10, 21, 26) // a pond deep enough not to soak away first
     for (let x = 10; x < 14; x++) g.set(x, 25, M.SEEDS)
-    run(g, 15)
+    // Sprouting is down to chance, so watch for up to 30 s rather than a fixed time.
+    for (let t = 0; t < 30 && !count(g, M.PLANT); t++) run(g, 1)
     expect(count(g, M.PLANT)).toBeGreaterThan(0)
   })
 

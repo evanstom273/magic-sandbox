@@ -23,9 +23,17 @@ export interface HudState {
   spells: Spell[] // the hotbar's spells, for the builder
   builderOpen: boolean // the spell builder is open (the game pauses)
   guideOpen: boolean // the guide to combining elements is open (the game pauses)
+  cheatsOpen: boolean // the cheat menu is open (the game pauses)
+  cheats: Cheats
 }
 
-let state: HudState = { health: 100, maxHealth: 100, dead: false, mana: 100, maxMana: 100, slots: [], activeSlot: 0, charge: 0, spells: [], builderOpen: false, guideOpen: false }
+/** Cheats (#24, #87), for testing and messing about. */
+export interface Cheats {
+  invulnerable: boolean // nothing hurts you
+  infiniteMana: boolean // mana stays full, whatever you cast
+}
+
+let state: HudState = { health: 100, maxHealth: 100, dead: false, mana: 100, maxMana: 100, slots: [], activeSlot: 0, charge: 0, spells: [], builderOpen: false, guideOpen: false, cheatsOpen: false, cheats: { invulnerable: false, infiniteMana: false } }
 const listeners = new Set<Listener>()
 
 export const hud = {

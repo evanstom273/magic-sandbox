@@ -3,7 +3,7 @@ import { boxHits } from '../player/movement.ts'
 import { CellGrid, Kind, KIND, Material as M } from '../world/grid.ts'
 import { electrify } from '../world/reactions.ts'
 import type { CastEvent } from './caster.ts'
-import { elementInfo, type FollowUp, type Spell, type TriggerKind } from './spells.ts'
+import { elementInfo, sizeOf, type FollowUp, type Spell, type TriggerKind } from './spells.ts'
 
 // What spells do once cast: each shape delivers its elements into the world and onto creatures.
 // The world's own rules (simulate.ts) take it from there (#16, #19).
@@ -41,16 +41,17 @@ export interface Trig {
   caster: Body
   age: number
   armed: boolean // for "when something comes near": the caster only counts once it has moved away
+  size?: number // the spell's size, which its follow-up takes too
 }
 export interface Anchor extends Trig { x: number; y: number }
 
-export interface Projectile { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; age: number; trig?: Trig }
+export interface Projectile { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; age: number; trig?: Trig; size?: number }
 export interface Spark { x: number; y: number; vx: number; vy: number; life: number; max: number; colour: number }
 export interface Flash { x: number; y: number; r: number; life: number; max: number; colour: number }
 export interface Beam { x0: number; y0: number; x1: number; y1: number; colour: number }
-export interface Rune { x: number; y: number; els: ElementId[]; strength: number; armed: boolean; age: number; trig?: Trig }
-export interface Wisp { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; life: number; tick: number; home: { x: number; y: number }; trig?: Trig }
-export interface Mote { angle: number; els: ElementId[]; strength: number; life: number; x: number; y: number; trig?: Trig }
+export interface Rune { x: number; y: number; els: ElementId[]; strength: number; armed: boolean; age: number; trig?: Trig; size?: number }
+export interface Wisp { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; life: number; tick: number; home: { x: number; y: number }; trig?: Trig; size?: number }
+export interface Mote { angle: number; els: ElementId[]; strength: number; life: number; x: number; y: number; trig?: Trig; size?: number }
 export interface Wave { x: number; y: number; r: number; max: number; els: ElementId[]; strength: number; hit: Set<Body> }
 /** Time in a bubble: slowed to about a third, or sped up by half again (for bodies; the world inside goes by its own rules). */
 export const SLOW_TIME = 0.35
@@ -100,6 +101,7 @@ export class Magic {
     const dir = { x: dx / len, y: dy / len }
     const els = mix(spell.elements)
     const s = ev.strength
+    const size = sizeOf(spell) // how big (#88): every shape's reach scales with it; the cost doesn't
     if (!els.length) {
       // Everything cancelled out (Life and Decay): a fizzle.
       this.flashes.push({ x: tip.x, y: tip.y, r: 3, life: 0.2, max: 0.2, colour: 0x8a8aa0 })
@@ -112,39 +114,39 @@ export class Magic {
         const spread = spell.cast === 'burst' || spell.cast === 'continuous' ? (rnd() - 0.5) * 0.12 : 0
         const a = Math.atan2(dir.y, dir.x) + spread
         const speed = 150 + 50 * Math.min(1.6, s)
-        this.projectiles.push({ x: tip.x, y: tip.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, els: [...els], strength: s, age: 0 })
+        this.projectiles.push({ x: tip.x, y: tip.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, els: [...els], strength: s, age: 0, size })
         break
       }
-      case 'cone': this.cone(els, tip, dir, s, ev); break
+      case 'cone': this.cone(els, tip, dir, s, ev, size); break
       case 'aoe': {
         const p = origin ?? this.clampToRange(caster, aim)
-        const r = 5 + 5 * s
+        const r = (5 + 5 * s) * size
         this.hit(els, p.x, p.y, r, 0.6 * s, false)
         this.flashes.push({ x: p.x, y: p.y, r, life: 0.3, max: 0.3, colour: elementInfo(els[0]).colour })
         break
       }
-      case 'self': this.self(els, caster, dir, s, ev); break
-      case 'beam': this.beamSlot = opts.slot ?? -1; this.beam(els, tip, dir, caster, ev.dt); break
+      case 'self': this.self(els, caster, dir, s, ev, size); break
+      case 'beam': this.beamSlot = opts.slot ?? -1; this.beam(els, tip, dir, caster, ev.dt, size); break
       case 'rune': {
         const p = origin ? this.firstSurface(origin, { x: origin.x + dir.x * 30, y: origin.y + dir.y * 30 + 30 }) : this.firstSurface(tip, aim)
-        this.runes.push({ x: p.x, y: p.y, els: [...els], strength: s, armed: false, age: 0 })
+        this.runes.push({ x: p.x, y: p.y, els: [...els], strength: s, armed: false, age: 0, size })
         if (this.runes.length > MAX_RUNES) this.runes.shift()
         break
       }
-      case 'target': this.target(els, caster, aim, s, ev); break
+      case 'target': this.target(els, caster, aim, s, ev, size); break
       case 'summon': {
         const p = origin ?? this.clampToRange(caster, aim)
-        this.wisps.push({ x: p.x, y: p.y, vx: 0, vy: 0, els: [...els], strength: s, life: 6 + 4 * s, tick: 0.3, home: { x: p.x, y: p.y } })
+        this.wisps.push({ x: p.x, y: p.y, vx: 0, vy: 0, els: [...els], strength: s, life: 6 + 4 * s, tick: 0.3, home: { x: p.x, y: p.y }, size })
         break
       }
       case 'orbit': {
         const n = Math.round(4 + 2 * s)
-        for (let i = 0; i < n; i++) this.motes.push({ angle: (i / n) * Math.PI * 2, els: [...els], strength: s, life: 12, x: caster.x, y: caster.y })
+        for (let i = 0; i < n; i++) this.motes.push({ angle: (i / n) * Math.PI * 2, els: [...els], strength: s, life: 12, x: caster.x, y: caster.y, size })
         break
       }
       case 'wave': {
         const o = origin ?? { x: caster.x, y: caster.y - caster.h / 2 }
-        this.waves.push({ x: o.x, y: o.y, r: 4, max: ev.sustained ? 26 : 22 + 22 * s, els: [...els], strength: ev.sustained ? 0.8 : s, hit: new Set([caster]) })
+        this.waves.push({ x: o.x, y: o.y, r: 4, max: (ev.sustained ? 26 : 22 + 22 * s) * size, els: [...els], strength: ev.sustained ? 0.8 : s, hit: new Set([caster]) })
         break
       }
       default: break
@@ -153,7 +155,7 @@ export class Magic {
     // A trigger rides on what the spell made (bolts, runes, wisps, motes), or waits where it landed.
     // Held spells set theirs when they're let go (see channelEnded).
     if (!spell.trigger || ev.sustained) return
-    const trig = (): Trig => ({ kind: spell.trigger!.kind, then: spell.trigger!.then, slot: opts.slot ?? -1, dir, strength: s, caster, age: 0, armed: false })
+    const trig = (): Trig => ({ kind: spell.trigger!.kind, then: spell.trigger!.then, slot: opts.slot ?? -1, dir, strength: s, caster, age: 0, armed: false, size })
     if (spell.shape === 'projectile') for (const p of this.projectiles.slice(counts.p)) p.trig = trig()
     else if (spell.shape === 'rune') { const r = this.runes.at(-1); if (r && this.runes.length >= counts.r) r.trig = trig() }
     else if (spell.shape === 'summon') for (const w of this.wisps.slice(counts.w)) w.trig = trig()
@@ -186,12 +188,12 @@ export class Magic {
     const dx = aim.x - tip.x, dy = aim.y - tip.y, l = Math.hypot(dx, dy) || 1
     const dir = { x: dx / l, y: dy / l }
     const end = spell.shape === 'beam' ? this.beamEnds.get(slot) ?? this.beamEnds.get(-1) ?? tip : this.landing(spell, tip, dir, aim, caster)
-    this.anchor({ kind: spell.trigger.kind, then: spell.trigger.then, slot, dir, strength: 1, caster, age: 0, armed: false }, end)
+    this.anchor({ kind: spell.trigger.kind, then: spell.trigger.then, slot, dir, strength: 1, caster, age: 0, armed: false, size: sizeOf(spell) }, end)
   }
 
   /** Sets off a trigger's follow-up spell from a point. */
   private fire(t: Trig, x: number, y: number): void {
-    const spell: Spell = { elements: t.then.elements, shape: t.then.shape, cast: 'instant' }
+    const spell: Spell = { elements: t.then.elements, shape: t.then.shape, cast: 'instant', size: t.size }
     this.flashes.push({ x, y, r: 6, life: 0.2, max: 0.2, colour: 0xffffff })
     this.cast(spell, { strength: Math.max(0.6, Math.min(1.2, t.strength)), sustained: false, dt: 0 }, { x, y }, { x: x + t.dir.x * 40, y: y + t.dir.y * 40 }, t.caster, { origin: { x, y } })
   }
@@ -272,7 +274,7 @@ export class Magic {
   }
 
   /** A held line from the catalyst to the first thing it meets. */
-  private beam(els: readonly ElementId[], tip: { x: number; y: number }, dir: { x: number; y: number }, caster: Body, dt: number): void {
+  private beam(els: readonly ElementId[], tip: { x: number; y: number }, dir: { x: number; y: number }, caster: Body, dt: number, size = 1): void {
     let x = tip.x, y = tip.y, hitBody: Body | undefined
     for (let t = 0; t < 110; t += 0.5) {
       const nx = tip.x + dir.x * t, ny = tip.y + dir.y * t
@@ -284,12 +286,16 @@ export class Magic {
     }
     const end = { x: x + dir.x, y: y + dir.y }
     for (const el of els) {
-      if (el === 'force') push(this.grid, end.x, end.y, 3, 0.9, end.x, end.y, dir.x, dir.y) // a drill
+      if (el === 'force') push(this.grid, end.x, end.y, 3 * size, 0.9, end.x, end.y, dir.x, dir.y) // a drill
       else if (SUBSTANCE[el] !== undefined) {
-        for (let i = 0; i < Math.round(70 * dt + Math.random()); i++) applyToCell(this.grid, el, Math.floor(x - dir.x * (1 + Math.random() * 2)), Math.floor(y - dir.y * (1 + Math.random() * 2)))
-      } else applyDisc(this.grid, [el], end.x, end.y, 2.5, 1, true)
+        // Poured out at the end, in a spray as wide as the beam.
+        for (let i = 0; i < Math.round(70 * dt * size + Math.random()); i++) {
+          const a = rnd() * Math.PI * 2, d = rnd() * (size - 1) * 1.5
+          applyToCell(this.grid, el, Math.floor(x - dir.x * (1 + Math.random() * 2) + Math.cos(a) * d), Math.floor(y - dir.y * (1 + Math.random() * 2) + Math.sin(a) * d))
+        }
+      } else applyDisc(this.grid, [el], end.x, end.y, 2.5 * size, 1, true)
     }
-    this.fields(els, end.x, end.y, 4, true, caster)
+    this.fields(els, end.x, end.y, 4 * size, true, caster)
     if (els.includes('light') && rnd() < 0.06) applyToCell(this.grid, 'heat', Math.floor(end.x), Math.floor(end.y)) // a held beam of Light warms what it hits
     if (hitBody) { this.touchBody(hitBody, els, dir.x * 600 * dt, dir.y * 600 * dt, 14 * dt); this.eat(hitBody, els, true, dt) }
     this.beams.push({ x0: tip.x, y0: tip.y, x1: x, y1: y, colour: elementInfo(els[0]).colour })
@@ -298,7 +304,7 @@ export class Magic {
   }
 
   /** Straight onto the aimed point (or the first thing in the way), small and precise. */
-  private target(els: readonly ElementId[], caster: Body, aim: { x: number; y: number }, s: number, ev: CastEvent): void {
+  private target(els: readonly ElementId[], caster: Body, aim: { x: number; y: number }, s: number, ev: CastEvent, size = 1): void {
     const from = { x: caster.x, y: caster.y - caster.h / 2 }
     const p = this.firstSurface(from, this.clampToRange(caster, aim))
     const body = this.bodyAt(p.x, p.y, 4)
@@ -306,11 +312,11 @@ export class Magic {
       this.touchBody(body, els, 0, ev.sustained ? -300 * ev.dt : -60 * s, ev.sustained ? 14 * ev.dt : 10 * s)
       if (els.includes('force')) body.impulse(0, ev.sustained ? -500 * ev.dt : -150 * s)
     }
-    applyDisc(this.grid, els.filter((e) => e !== 'force'), p.x, p.y, 2.5 + 1.5 * s, 1, ev.sustained)
-    if (els.includes('force')) push(this.grid, p.x, p.y, 3 + s, 0.8 * s)
-    this.fields(els, p.x, p.y, 3 + 3 * s, ev.sustained, caster)
+    applyDisc(this.grid, els.filter((e) => e !== 'force'), p.x, p.y, (2.5 + 1.5 * s) * size, 1, ev.sustained)
+    if (els.includes('force')) push(this.grid, p.x, p.y, (3 + s) * size, 0.8 * s)
+    this.fields(els, p.x, p.y, (3 + 3 * s) * size, ev.sustained, caster)
     if (body) this.eat(body, els, ev.sustained, ev.dt)
-    if (!ev.sustained || Math.random() < 0.2) this.flashes.push({ x: p.x, y: p.y, r: 4, life: 0.18, max: 0.18, colour: elementInfo(els[0]).colour })
+    if (!ev.sustained || Math.random() < 0.2) this.flashes.push({ x: p.x, y: p.y, r: 4 * size, life: 0.18, max: 0.18, colour: elementInfo(els[0]).colour })
   }
 
   /**
@@ -419,9 +425,9 @@ export class Magic {
   }
 
   /** Void cast on yourself: a blink along the aim, to the furthest spot you fit before anything solid. */
-  private blink(me: Body, dir: { x: number; y: number }, s: number): void {
+  private blink(me: Body, dir: { x: number; y: number }, s: number, size = 1): void {
     if (!me.moveTo) return
-    const reach = BLINK * Math.min(1, 0.6 + 0.4 * s)
+    const reach = BLINK * Math.min(1, 0.6 + 0.4 * s) * size
     let bx = me.x, by = me.y
     for (let t = 1; t <= reach; t++) {
       const x = me.x + dir.x * t, y = me.y + dir.y * t
@@ -463,11 +469,11 @@ export class Magic {
     for (let i = 0; i < (sustained ? 1 : 10); i++) this.spark(cx, cy, els, 30 + rnd() * 50)
   }
 
-  private cone(els: readonly ElementId[], tip: { x: number; y: number }, dir: { x: number; y: number }, s: number, ev: CastEvent): void {
+  private cone(els: readonly ElementId[], tip: { x: number; y: number }, dir: { x: number; y: number }, s: number, ev: CastEvent, size = 1): void {
     const g = this.grid
-    const rays = ev.sustained ? Math.max(1, Math.round(160 * ev.dt + rnd())) : Math.round(40 * s)
+    const rays = ev.sustained ? Math.max(1, Math.round(160 * ev.dt * size + rnd())) : Math.round(40 * s * size)
     const half = 0.32 + 0.08 * Math.min(1, s - 1 > 0 ? s - 1 : 0)
-    const length = 30 + 18 * Math.min(1.6, s)
+    const length = (30 + 18 * Math.min(1.6, s)) * size
     const base = Math.atan2(dir.y, dir.x)
     for (let i = 0; i < rays; i++) {
       const a = base + (rnd() * 2 - 1) * half
@@ -491,7 +497,7 @@ export class Magic {
     }
     if (els.some((e) => FIELD_FORCES.includes(e) || e === 'sound')) {
       const end = this.firstSurface(tip, { x: tip.x + dir.x * length * 0.7, y: tip.y + dir.y * length * 0.7 })
-      this.fields(els, end.x, end.y, 6 + 3 * s, ev.sustained)
+      this.fields(els, end.x, end.y, (6 + 3 * s) * size, ev.sustained)
     }
     // Life in a cone heals whatever it washes over; force shoves it.
     for (const b of this.bodies) {
@@ -504,15 +510,15 @@ export class Magic {
     }
   }
 
-  private self(els: readonly ElementId[], me: Body, dir: { x: number; y: number }, s: number, ev: CastEvent): void {
+  private self(els: readonly ElementId[], me: Body, dir: { x: number; y: number }, s: number, ev: CastEvent, size = 1): void {
     const cx = me.x, cy = me.y - me.h / 2
-    this.fields(els, cx, cy, 6 + 4 * s, ev.sustained, me)
+    this.fields(els, cx, cy, (6 + 4 * s) * size, ev.sustained, me)
     for (const el of els) {
       if (FIELD_FORCES.includes(el)) {
         if (el === 'gravity' && ev.sustained) me.thrust(0, -640, ev.dt) // held: float
         continue
       }
-      if (el === 'void') { if (!ev.sustained) this.blink(me, dir, s); continue } // a blink, not a hole around you
+      if (el === 'void') { if (!ev.sustained) this.blink(me, dir, s, size); continue } // a blink, not a hole around you
       if (el === 'force') {
         if (ev.sustained) me.thrust(dir.x * 900, dir.y * 900, ev.dt) // levitate, fly
         else me.impulse(dir.x * 230 * s, dir.y * 230 * s) // a launch
@@ -522,14 +528,14 @@ export class Magic {
         applyDisc(this.grid, ['cold'], me.x, me.y + 2, 7) // frost underfoot: walk on water
       } else {
         // A ring around the caster, clear of the body.
-        const n = ev.sustained ? Math.round(60 * ev.dt + rnd()) : Math.round(70 * s)
+        const n = ev.sustained ? Math.round(60 * ev.dt * size + rnd()) : Math.round(70 * s * size)
         for (let i = 0; i < n; i++) {
-          const a = rnd() * Math.PI * 2, r = 8 + rnd() * 4
+          const a = rnd() * Math.PI * 2, r = 8 + rnd() * 4 * Math.max(0.5, size) // a wider ring for bigger spells, never closer in
           applyToCell(this.grid, el, Math.floor(cx + Math.cos(a) * r), Math.floor(cy + Math.sin(a) * r * 1.2), ev.sustained)
         }
       }
     }
-    if (!ev.sustained || rnd() < 0.3) this.flashes.push({ x: cx, y: cy, r: 10, life: 0.25, max: 0.25, colour: elementInfo(els[0]).colour })
+    if (!ev.sustained || rnd() < 0.3) this.flashes.push({ x: cx, y: cy, r: 10 * size, life: 0.25, max: 0.25, colour: elementInfo(els[0]).colour })
   }
 
   private clampToRange(caster: Body, aim: { x: number; y: number }): { x: number; y: number } {
@@ -566,13 +572,13 @@ export class Magic {
         const nx = p.x + (p.vx * dt) / n, ny = p.y + (p.vy * dt) / n
         const m = g.get(Math.floor(nx), Math.floor(ny)), kd = KIND[m]
         if (!g.inside(Math.floor(nx), Math.floor(ny)) || !(m === M.EMPTY || kd === Kind.GAS || kd === Kind.FIRE)) hit = true
-        else if (this.bodies.some((b) => !b.isCaster && Math.abs(b.x - nx) < b.w / 2 && ny > b.y - b.h && ny < b.y)) hit = true
+        else if (this.bodies.some((b) => { const pad = ((p.size ?? 1) - 1) * 1.5; return !b.isCaster && Math.abs(b.x - nx) < b.w / 2 + pad && ny > b.y - b.h - pad && ny < b.y + pad })) hit = true
         else { p.x = nx; p.y = ny }
       }
       if (rnd() < 0.6) this.sparks.push({ x: p.x, y: p.y, vx: -p.vx * 0.1, vy: -p.vy * 0.1, life: 0.2, max: 0.2, colour: elementInfo(p.els[0]).colour })
       if (hit) {
         this.projectiles.splice(i, 1)
-        const r = 4 + 4 * Math.min(1.6, p.strength)
+        const r = (4 + 4 * Math.min(1.6, p.strength)) * (p.size ?? 1)
         this.hit(p.els, p.x, p.y, r, 0.75 * p.strength, false)
         this.flashes.push({ x: p.x, y: p.y, r, life: 0.22, max: 0.22, colour: elementInfo(p.els[0]).colour })
         // Its trigger goes off here on impact; otherwise it keeps waiting where the bolt landed.
@@ -613,7 +619,7 @@ export class Magic {
   setOff(i: number): void {
     const r = this.runes[i]
     this.runes.splice(i, 1)
-    const radius = 5 + 5 * r.strength
+    const radius = (5 + 5 * r.strength) * (r.size ?? 1)
     this.hit(r.els, r.x, r.y, radius, 0.7 * r.strength, false)
     this.flashes.push({ x: r.x, y: r.y, r: radius, life: 0.3, max: 0.3, colour: elementInfo(r.els[0]).colour })
     if (r.trig) this.fire(r.trig, r.x, r.y - 2)
@@ -640,8 +646,8 @@ export class Magic {
       if (w.tick <= 0) {
         w.tick = 0.5
         if (w.els.includes('life')) for (const b of this.bodies) if (Math.hypot(b.x - w.x, b.y - b.h / 2 - w.y) < 16) b.heal(4 * w.strength)
-        this.hit(w.els.filter((e) => e !== 'life'), w.x, w.y + 3, 3 + 2 * w.strength, 0.5 * w.strength, false)
-        if (w.els.includes('life')) applyDisc(this.grid, ['life'], w.x, w.y + 6, 5)
+        this.hit(w.els.filter((e) => e !== 'life'), w.x, w.y + 3, (3 + 2 * w.strength) * (w.size ?? 1), 0.5 * w.strength, false)
+        if (w.els.includes('life')) applyDisc(this.grid, ['life'], w.x, w.y + 6, 5 * (w.size ?? 1))
       }
     }
   }
@@ -658,7 +664,7 @@ export class Magic {
       if (m.life <= 0 || prey) {
         this.motes.splice(i, 1)
         if (prey) {
-          this.hit(m.els, m.x, m.y, 3 + 2 * m.strength, 0.6 * m.strength, false)
+          this.hit(m.els, m.x, m.y, (3 + 2 * m.strength) * (m.size ?? 1), 0.6 * m.strength, false)
           this.flashes.push({ x: m.x, y: m.y, r: 5, life: 0.2, max: 0.2, colour: elementInfo(m.els[0]).colour })
           if (m.trig?.kind === 'impact') this.fire(m.trig, m.x, m.y)
         }

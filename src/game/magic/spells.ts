@@ -120,6 +120,14 @@ export interface Spell {
   shape: ShapeId
   cast: CastType
   trigger?: { kind: TriggerKind; then: FollowUp }
+  size?: number // how big its effect is, ×0.5–×5 (#88); it doesn't change the cost. 1 if not given
+}
+
+/** The Size slider's range (#88). */
+export const SIZE = { min: 0.5, max: 5, step: 0.25 }
+export const sizeOf = (spell: Spell) => Math.max(SIZE.min, Math.min(SIZE.max, spell.size ?? 1))
+export function withSize(spell: Spell, size: number): Spell {
+  return { ...spell, size: Math.max(SIZE.min, Math.min(SIZE.max, Math.round(size / SIZE.step) * SIZE.step)) }
 }
 
 /** Elements a spell can mix, from the catalyst (#27). The stand-in catalyst holds two. */

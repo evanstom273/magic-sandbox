@@ -28,7 +28,7 @@ export function Guide() {
     const onKey = (e: KeyboardEvent) => {
       // Typing in the search box is typing (the box handles its own Escape first).
       if (e.target instanceof HTMLInputElement && e.key !== 'Escape') return
-      if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { e.preventDefault(); close() }
+      if (!e.repeat && (e.key === 'Escape' || e.key === 'g' || e.key === 'G')) { e.preventDefault(); close() }
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)

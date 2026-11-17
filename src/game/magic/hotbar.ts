@@ -1,4 +1,4 @@
-import { elementInfo, shapeInfo, TRIGGERS, type Spell } from './spells.ts'
+import { elementInfo, shapeInfo, sizeOf, TRIGGERS, type Spell } from './spells.ts'
 
 // The hotbar of four prepared spells (#82). Until the spell builder arrives, it starts with four
 // examples, one each of Projectile, Cone, Self and AoE.
@@ -13,7 +13,8 @@ export function describe(spell: Spell) {
   const els = spell.elements.map((e) => elementInfo(e).name).join(' + ')
   const t = spell.trigger
   const then = t ? ` → ${t.then.elements.map((e) => elementInfo(e).name).join(' + ')} ${shapeInfo(t.then.shape).name}` : ''
-  const cast = spell.cast[0].toUpperCase() + spell.cast.slice(1)
+  const size = sizeOf(spell) === 1 ? '' : `, ×${sizeOf(spell)}`
+  const cast = spell.cast[0].toUpperCase() + spell.cast.slice(1) + size
   return {
     name: `${els} ${shapeInfo(spell.shape).name}${then}`,
     detail: t ? `${cast}, ${TRIGGERS.find((x) => x.id === t.kind)!.name.toLowerCase()}` : cast,

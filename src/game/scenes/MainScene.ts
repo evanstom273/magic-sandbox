@@ -106,7 +106,7 @@ export class MainScene extends Phaser.Scene {
     this.player = createPlayer(SPAWN.x, SPAWN.y)
     this.body = figureBody('open')
     hud.set({ health: this.health.value, maxHealth: HEALTH.max })
-    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR,B,G') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR') as Record<string, Phaser.Input.Keyboard.Key>
     this.input.mouse?.disableContextMenu()
     // A tap on the world shorter than a frame still casts: latch where it landed until the next update.
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
@@ -138,7 +138,7 @@ export class MainScene extends Phaser.Scene {
       w.__world = () => this.grid
       w.__magic = () => ({ mana: this.mana.value, slot: this.slot, projectiles: this.magic.projectiles.length, hotbar: this.hotbar, charge: this.caster.charge })
       w.__setSpell = (i: number, spell: Spell) => { this.hotbar[i] = spell; this.syncHotbar() }
-      w.__infiniteMana = (on: boolean) => { this.mana.infinite = on }
+      w.__infiniteMana = (on: boolean) => hud.set({ cheats: { ...hud.get().cheats, infiniteMana: on } })
       w.__setMana = (n: number) => { this.mana.value = n }
       w.__health = () => ({ value: this.health.value, marks: this.health.marks.map((m) => m.kind) })
       w.__dummies = () => this.dummies.map((d) => ({ x: d.x, y: d.y, vx: d.vx, frozen: d.frozen, healed: d.healed, scorched: d.scorched, stunned: d.stunned, poisoned: d.poisoned }))
@@ -177,24 +177,24 @@ export class MainScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
-    // The spell builder: B or the gamepad's Select opens it; while it's open the game pauses.
+    // Menus (the spell builder, the guide, cheats) pause the game while they're open. Their keys (B,
+    // G, C) are handled by the page (MenuButtons); the gamepad's Select opens and closes the builder.
     for (const e of spellEdits.splice(0)) { this.hotbar[e.slot] = e.spell; this.caster.reset(); this.syncHotbar() }
     const pad0 = this.input.gamepad?.pad1
     const select = !!pad0 && pad0.buttons[8]?.pressed
-    const open = hud.get().builderOpen
-    if ((this.keys.B.isDown && !this.builderKey) || (select && !this.selectHeld)) hud.set({ builderOpen: !open })
-    this.builderKey = this.keys.B.isDown
-    // G opens the guide to combining elements (it pauses the game too).
-    if (this.keys.G.isDown && !this.guideKey && !open) hud.set({ guideOpen: true })
-    this.guideKey = this.keys.G.isDown
+    if (select && !this.selectHeld) hud.set({ builderOpen: !hud.get().builderOpen })
+    // Cheats take effect at once, even with the menu still open.
+    const cheats = hud.get().cheats
+    if (cheats.infiniteMana !== this.mana.infinite) {
+      this.mana.infinite = cheats.infiniteMana
+      if (cheats.infiniteMana) { this.mana.value = this.mana.max; hud.set({ mana: this.mana.value }) }
+    }
     this.selectHeld = select
-    const nowOpen = hud.get().builderOpen || hud.get().guideOpen
+    const nowOpen = hud.get().builderOpen || hud.get().guideOpen || hud.get().cheatsOpen
     if (nowOpen !== this.wasOpen) {
-      // Hand the keyboard to the builder while it's open, and forget keys held across the switch.
+      // Hand the keyboard to the menu while it's open, and forget keys held across the switch.
       this.input.keyboard!.enabled = !nowOpen
       this.input.keyboard!.resetKeys()
-      this.builderKey = false
-      this.guideKey = false
       this.wasOpen = nowOpen
     }
     if (nowOpen) return
@@ -379,8 +379,6 @@ export class MainScene extends Phaser.Scene {
   private padBumpers = { lb: false, rb: false }
   private lastPointer = { x: -1, y: -1 }
   private tapLatch: { x: number; y: number } | null = null
-  private builderKey = false
-  private guideKey = false
   private wasOpen = false
   private castHeld = false
   private recastHold = false
@@ -548,6 +546,7 @@ export class MainScene extends Phaser.Scene {
 
   /** Damage from anywhere. The body squashes, flashes and dents (or, burnt, loses cells); at zero it shatters. */
   private hurt(amount: number, at: number, kind: 'dent' | 'burn' = 'dent'): void {
+    if (hud.get().cheats.invulnerable) return // the cheat: nothing hurts (you still get shoved about)
     const p = this.player
     const dead = this.health.hurt(amount, kind, at)
     if (kind === 'burn') this.squash.set(1.12, 0.9) // a flinch, not the full blow
@@ -815,8 +814,9 @@ export class MainScene extends Phaser.Scene {
       g.fillRect(s.x - 0.5, s.y - 0.5, 1, 1)
     }
     for (const pr of this.magic.projectiles) {
+      const half = Math.round(1 + ((pr.size ?? 1) - 1) * 1.2) // bigger spells, bigger bolts
       g.fillStyle(elementInfo(pr.els[0]).colour, 1)
-      g.fillRect(Math.floor(pr.x) - 1, Math.floor(pr.y) - 1, 3, 3)
+      g.fillRect(Math.floor(pr.x) - half, Math.floor(pr.y) - half, half * 2 + 1, half * 2 + 1)
       g.fillStyle(0xffffff, 0.8)
       g.fillRect(Math.floor(pr.x), Math.floor(pr.y), 1, 1)
     }

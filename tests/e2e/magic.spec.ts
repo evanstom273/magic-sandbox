@@ -196,3 +196,34 @@ test('the builder\'s element search and filters', async ({ page }) => {
   await expect(builder).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Spell 1: Water \+ Lava Projectile/ })).toBeVisible()
 })
+
+test('the guide to combining elements: search an element, two together, and it pauses the game', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __player?: unknown }).__player === 'function')
+  await page.getByRole('button', { name: 'Guide' }).dispatchEvent('pointerdown')
+  const guide = page.getByRole('dialog', { name: 'Guide' })
+  await expect(guide).toBeVisible()
+  const search = guide.getByRole('searchbox', { name: 'Search the guide' })
+  await search.fill('lava')
+  await expect(guide.getByRole('article', { name: 'Lava' })).toBeVisible()
+  await expect(guide.getByRole('list', { name: 'Combinations' })).toContainText('Cold on lava')
+  await search.fill('lava + water')
+  await expect(guide.getByRole('list', { name: 'Combinations' })).toContainText('Obsidian and a burst of steam.')
+  await guide.getByRole('button', { name: 'Show Water' }).first().click() // a colour shows that element
+  await expect(guide.getByRole('article', { name: 'Water' })).toBeVisible()
+
+  // The game is paused: holding D doesn't walk.
+  const x = () => page.evaluate(() => (window as unknown as { __player: () => { x: number } }).__player().x)
+  const before = await x()
+  await page.keyboard.down('d'); await page.waitForTimeout(300); await page.keyboard.up('d')
+  expect(await x()).toBe(before)
+
+  await search.press('Escape') // clears the search
+  await expect(search).toHaveValue('')
+  await search.press('Escape') // then closes
+  await expect(guide).toHaveCount(0)
+  await page.keyboard.press('g') // G opens it again
+  await expect(guide).toBeVisible()
+  await page.keyboard.press('g')
+  await expect(guide).toHaveCount(0)
+})

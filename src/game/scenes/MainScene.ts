@@ -106,7 +106,7 @@ export class MainScene extends Phaser.Scene {
     this.player = createPlayer(SPAWN.x, SPAWN.y)
     this.body = figureBody('open')
     hud.set({ health: this.health.value, maxHealth: HEALTH.max })
-    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR,B') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = this.input.keyboard!.addKeys('A,D,W,LEFT,RIGHT,UP,SPACE,K,ONE,TWO,THREE,FOUR,B,G') as Record<string, Phaser.Input.Keyboard.Key>
     this.input.mouse?.disableContextMenu()
     // A tap on the world shorter than a frame still casts: latch where it landed until the next update.
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
@@ -184,13 +184,17 @@ export class MainScene extends Phaser.Scene {
     const open = hud.get().builderOpen
     if ((this.keys.B.isDown && !this.builderKey) || (select && !this.selectHeld)) hud.set({ builderOpen: !open })
     this.builderKey = this.keys.B.isDown
+    // G opens the guide to combining elements (it pauses the game too).
+    if (this.keys.G.isDown && !this.guideKey && !open) hud.set({ guideOpen: true })
+    this.guideKey = this.keys.G.isDown
     this.selectHeld = select
-    const nowOpen = hud.get().builderOpen
+    const nowOpen = hud.get().builderOpen || hud.get().guideOpen
     if (nowOpen !== this.wasOpen) {
       // Hand the keyboard to the builder while it's open, and forget keys held across the switch.
       this.input.keyboard!.enabled = !nowOpen
       this.input.keyboard!.resetKeys()
       this.builderKey = false
+      this.guideKey = false
       this.wasOpen = nowOpen
     }
     if (nowOpen) return
@@ -376,6 +380,7 @@ export class MainScene extends Phaser.Scene {
   private lastPointer = { x: -1, y: -1 }
   private tapLatch: { x: number; y: number } | null = null
   private builderKey = false
+  private guideKey = false
   private wasOpen = false
   private castHeld = false
   private recastHold = false

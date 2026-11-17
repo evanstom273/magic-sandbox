@@ -1,9 +1,10 @@
 import { PhaserGame } from './game/PhaserGame.tsx'
 import { DeathPrompt } from './ui/DeathPrompt.tsx'
+import { Guide } from './ui/Guide.tsx'
 import { HealthBar } from './ui/HealthBar.tsx'
 import { Hotbar } from './ui/Hotbar.tsx'
+import { MenuButtons } from './ui/MenuButtons.tsx'
 import { SpellBuilder } from './ui/SpellBuilder.tsx'
-import { SpellsButton } from './ui/SpellsButton.tsx'
 import { TouchControls } from './ui/TouchControls.tsx'
 
 // The React shell. Phaser runs the game inside PhaserGame; React draws what sits on top of it.
@@ -13,9 +14,10 @@ export default function App() {
       <PhaserGame />
       <HealthBar />
       <Hotbar />
-      <SpellsButton />
+      <MenuButtons />
       <DeathPrompt />
       <SpellBuilder />
+      <Guide />
       <TouchControls />
     </main>
   )

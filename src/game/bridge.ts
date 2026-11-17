@@ -22,9 +22,10 @@ export interface HudState {
   charge: number // 0–1 while a charged spell is building
   spells: Spell[] // the hotbar's spells, for the builder
   builderOpen: boolean // the spell builder is open (the game pauses)
+  guideOpen: boolean // the guide to combining elements is open (the game pauses)
 }
 
-let state: HudState = { health: 100, maxHealth: 100, dead: false, mana: 100, maxMana: 100, slots: [], activeSlot: 0, charge: 0, spells: [], builderOpen: false }
+let state: HudState = { health: 100, maxHealth: 100, dead: false, mana: 100, maxMana: 100, slots: [], activeSlot: 0, charge: 0, spells: [], builderOpen: false, guideOpen: false }
 const listeners = new Set<Listener>()
 
 export const hud = {

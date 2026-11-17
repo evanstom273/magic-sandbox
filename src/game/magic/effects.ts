@@ -1,4 +1,5 @@
-import { applyDisc, applyToCell, push, SUBSTANCE, type ElementId } from '../world/elements.ts'
+import { applyDisc, applyToCell, FIELD_FORCES, mix, push, SUBSTANCE, type ElementId } from '../world/elements.ts'
+import { boxHits } from '../player/movement.ts'
 import { CellGrid, Kind, KIND, Material as M } from '../world/grid.ts'
 import type { CastEvent } from './caster.ts'
 import { elementInfo, type FollowUp, type Spell, type TriggerKind } from './spells.ts'
@@ -17,7 +18,15 @@ export interface Body {
   impulse(vx: number, vy: number): void // a shove, in cells a second
   thrust(ax: number, ay: number, dt: number): void // a sustained push (flying)
   affect?(el: ElementId): void // other elements touching it (freezing, scorching, wetting)
+  hurt?(n: number): void // magic that eats cells (Void, Decay)
+  moveTo?(x: number, y: number): void // a blink
 }
+
+/**
+ * A field a spell leaves where it lands, for a while: a gravity well, a magnet, or a bubble of
+ * slowed or sped-up time. The simulation honours them (grid.fields); wells pull bodies in too.
+ */
+export interface Zone { kind: 'pull' | 'magnet' | 'slow' | 'fast'; x: number; y: number; r: number; life: number; max: number; owner?: Body }
 
 /** A trigger waiting to set off its follow-up spell (#17, #32), riding on something or sitting at a point. */
 export interface Trig {
@@ -40,6 +49,11 @@ export interface Rune { x: number; y: number; els: ElementId[]; strength: number
 export interface Wisp { x: number; y: number; vx: number; vy: number; els: ElementId[]; strength: number; life: number; tick: number; home: { x: number; y: number }; trig?: Trig }
 export interface Mote { angle: number; els: ElementId[]; strength: number; life: number; x: number; y: number; trig?: Trig }
 export interface Wave { x: number; y: number; r: number; max: number; els: ElementId[]; strength: number; hit: Set<Body> }
+/** Time in a bubble: slowed to about a third, or sped up by half again (for bodies; the world inside goes by its own rules). */
+export const SLOW_TIME = 0.35
+export const FAST_TIME = 1.6
+const MAX_ZONES = 16
+const BLINK = 40 // the furthest a Void blink goes, in cells
 
 const MAX_RUNES = 6
 const RUNE_REACH = 12
@@ -61,6 +75,8 @@ export class Magic {
   readonly motes: Mote[] = []
   readonly waves: Wave[] = []
   readonly anchors: Anchor[] = []
+  readonly zones: Zone[] = []
+  readonly ripples: Flash[] = [] // Sound's shockwaves, drawn as rings spreading out
   private beamEnds = new Map<number, { x: number; y: number; dir: { x: number; y: number } }>()
   private beamSlot = -1
   bodies: Body[] = []
@@ -77,8 +93,13 @@ export class Magic {
     const dx = aim.x - tip.x, dy = aim.y - tip.y
     const len = Math.hypot(dx, dy) || 1
     const dir = { x: dx / len, y: dy / len }
-    const els = spell.elements
+    const els = mix(spell.elements)
     const s = ev.strength
+    if (!els.length) {
+      // Everything cancelled out (Life and Decay): a fizzle.
+      this.flashes.push({ x: tip.x, y: tip.y, r: 3, life: 0.2, max: 0.2, colour: 0x8a8aa0 })
+      return
+    }
     const origin = opts.origin
     const counts = { p: this.projectiles.length, r: this.runes.length, w: this.wisps.length, m: this.motes.length }
     switch (spell.shape) {
@@ -263,11 +284,11 @@ export class Magic {
         for (let i = 0; i < Math.round(70 * dt + Math.random()); i++) applyToCell(this.grid, el, Math.floor(x - dir.x * (1 + Math.random() * 2)), Math.floor(y - dir.y * (1 + Math.random() * 2)))
       } else applyDisc(this.grid, [el], end.x, end.y, 2.5, 1, true)
     }
-    if (hitBody) this.touchBody(hitBody, els, dir.x * 600 * dt, dir.y * 600 * dt, 14 * dt)
+    this.fields(els, end.x, end.y, 4, true, caster)
+    if (hitBody) { this.touchBody(hitBody, els, dir.x * 600 * dt, dir.y * 600 * dt, 14 * dt); this.eat(hitBody, els, true, dt) }
     this.beams.push({ x0: tip.x, y0: tip.y, x1: x, y1: y, colour: elementInfo(els[0]).colour })
     this.beamEnds.set(this.beamSlot, { x, y, dir })
     if (Math.random() < 0.5) this.spark(x, y, els, 25)
-    void caster
   }
 
   /** Straight onto the aimed point (or the first thing in the way), small and precise. */
@@ -281,7 +302,88 @@ export class Magic {
     }
     applyDisc(this.grid, els.filter((e) => e !== 'force'), p.x, p.y, 2.5 + 1.5 * s, 1, ev.sustained)
     if (els.includes('force')) push(this.grid, p.x, p.y, 3 + s, 0.8 * s)
+    this.fields(els, p.x, p.y, 3 + 3 * s, ev.sustained, caster)
+    if (body) this.eat(body, els, ev.sustained, ev.dt)
     if (!ev.sustained || Math.random() < 0.2) this.flashes.push({ x: p.x, y: p.y, r: 4, life: 0.18, max: 0.18, colour: elementInfo(els[0]).colour })
+  }
+
+  /**
+   * Forces that work as a field where a spell lands, sized by the spell's reach `r`: Gravity leaves
+   * a well, Magnetism a magnet, Time a bubble (slowed; sped up if mixed with Life); Sound spreads a
+   * ring. Held spells keep theirs going while they're held.
+   */
+  private fields(els: readonly ElementId[], x: number, y: number, r: number, sustained: boolean, owner?: Body): void {
+    const life = (n: number) => (sustained ? 0.3 : n)
+    if (els.includes('gravity')) this.zone('pull', x, y, r + 5, life(2 + r / 4), owner)
+    if (els.includes('magnetism')) this.zone('magnet', x, y, r * 1.4 + 6, life(3 + r / 4), owner)
+    if (els.includes('time')) this.zone(els.includes('life') ? 'fast' : 'slow', x, y, r + 6, life(5 + r / 3))
+    if (els.includes('sound') && (!sustained || rnd() < 0.15)) this.ripples.push({ x, y, r: r * 1.6 + 6, life: 0.45, max: 0.45, colour: 0x9ad8c8 })
+  }
+
+  /** A field at (x, y), or an existing one of its kind near there kept going (held spells, wisps). */
+  private zone(kind: Zone['kind'], x: number, y: number, r: number, life: number, owner?: Body): void {
+    const z = this.zones.find((z) => z.kind === kind && Math.hypot(z.x - x, z.y - y) < Math.max(4, z.r * 0.4))
+    if (z) { z.x = x; z.y = y; z.r = Math.max(z.r, r); z.life = Math.max(z.life, life); z.max = Math.max(z.max, z.life); return }
+    this.zones.push({ kind, x, y, r, life, max: life, owner })
+    if (this.zones.length > MAX_ZONES) this.zones.shift()
+  }
+
+  /** How fast time goes for a body at (x, y): slowed or sped up in a time bubble. */
+  timeScaleAt(x: number, y: number): number {
+    for (const z of this.zones) {
+      if ((z.kind === 'slow' || z.kind === 'fast') && Math.hypot(z.x - x, z.y - y) < z.r) return z.kind === 'slow' ? SLOW_TIME : FAST_TIME
+    }
+    return 1
+  }
+
+  /** Void eats a body's cells, the caster's included if they're careless; Decay rots them a little. */
+  private eat(b: Body, els: readonly ElementId[], sustained: boolean, dt: number): void {
+    if (els.includes('void')) b.hurt?.(sustained ? 30 * dt : 20)
+    if (els.includes('decay') && !b.isCaster) b.hurt?.(sustained ? 8 * dt : 6)
+  }
+
+  /** Fields wear off; the rest are handed to the simulation, and wells pull bodies in (not whoever made them). */
+  private updateZones(dt: number): void {
+    for (let i = this.zones.length - 1; i >= 0; i--) {
+      const z = this.zones[i]
+      z.life -= dt
+      if (z.life <= 0) this.zones.splice(i, 1)
+    }
+    const g = this.grid
+    g.field.fill(0)
+    g.fields = this.zones.map((z) => ({ kind: z.kind, x: z.x, y: z.y, r: z.r }))
+    this.zones.forEach((z, i) => {
+      for (let y = Math.max(0, Math.floor(z.y - z.r)); y <= Math.min(g.height - 1, Math.ceil(z.y + z.r)); y++) {
+        for (let x = Math.max(0, Math.floor(z.x - z.r)); x <= Math.min(g.width - 1, Math.ceil(z.x + z.r)); x++) {
+          if ((x + 0.5 - z.x) ** 2 + (y + 0.5 - z.y) ** 2 <= z.r * z.r) g.field[y * g.width + x] = i + 1
+        }
+      }
+    })
+    for (const z of this.zones) {
+      if (z.kind !== 'pull') continue
+      for (const b of this.bodies) {
+        if (b === z.owner) continue
+        const dx = z.x - b.x, dy = z.y - (b.y - b.h / 2), d = Math.hypot(dx, dy)
+        if (d > z.r + 4 || d < 1.5) continue
+        b.thrust((dx / d) * 500, (dy / d) * 500 - 420, dt)
+      }
+    }
+  }
+
+  /** Void cast on yourself: a blink along the aim, to the furthest spot you fit before anything solid. */
+  private blink(me: Body, dir: { x: number; y: number }, s: number): void {
+    if (!me.moveTo) return
+    const reach = BLINK * Math.min(1, 0.6 + 0.4 * s)
+    let bx = me.x, by = me.y
+    for (let t = 1; t <= reach; t++) {
+      const x = me.x + dir.x * t, y = me.y + dir.y * t
+      if (boxHits(this.grid.isSolid, x, y, me.w, me.h)) break
+      bx = x; by = y
+    }
+    if (bx === me.x && by === me.y) return
+    this.flashes.push({ x: me.x, y: me.y - me.h / 2, r: 9, life: 0.25, max: 0.25, colour: 0xc03aff })
+    me.moveTo(bx, by)
+    this.flashes.push({ x: bx, y: by - me.h / 2, r: 9, life: 0.3, max: 0.3, colour: 0xc03aff })
   }
 
   /** Elements meeting one body: life heals, force shoves, the rest affect it. */
@@ -298,9 +400,11 @@ export class Magic {
     if (!els.length) return
     applyDisc(this.grid, els.filter((e) => e !== 'force'), cx, cy, r, 1, sustained)
     if (els.includes('force')) push(this.grid, cx, cy, r, Math.min(1, forceStrength))
+    this.fields(els, cx, cy, r, sustained)
     for (const b of this.bodies) {
       const bx = b.x, by = b.y - b.h / 2
       if (Math.hypot(bx - cx, by - cy) > r + Math.max(b.w, b.h) / 2) continue
+      this.eat(b, els, sustained, dt)
       if (els.includes('life')) b.heal(sustained ? 14 * dt : 10 * forceStrength / 0.6)
       if (els.includes('force') && !b.isCaster) {
         const ax = bx - cx, ay = by - cy, l = Math.hypot(ax, ay) || 1
@@ -337,6 +441,10 @@ export class Magic {
       if (lastFree > 0) for (const el of els) if (SUBSTANCE[el] !== undefined) applyToCell(g, el, lx, ly)
       if (rnd() < 0.5) this.sparks.push({ x: tip.x, y: tip.y, vx: cx * (60 + rnd() * 60), vy: cy * (60 + rnd() * 60), life: 0.25, max: 0.25, colour: elementInfo(els[(rnd() * els.length) | 0]).colour })
     }
+    if (els.some((e) => FIELD_FORCES.includes(e) || e === 'sound')) {
+      const end = this.firstSurface(tip, { x: tip.x + dir.x * length * 0.7, y: tip.y + dir.y * length * 0.7 })
+      this.fields(els, end.x, end.y, 6 + 3 * s, ev.sustained)
+    }
     // Life in a cone heals whatever it washes over; force shoves it.
     for (const b of this.bodies) {
       if (b.isCaster) continue
@@ -350,7 +458,13 @@ export class Magic {
 
   private self(els: readonly ElementId[], me: Body, dir: { x: number; y: number }, s: number, ev: CastEvent): void {
     const cx = me.x, cy = me.y - me.h / 2
+    this.fields(els, cx, cy, 6 + 4 * s, ev.sustained, me)
     for (const el of els) {
+      if (FIELD_FORCES.includes(el)) {
+        if (el === 'gravity' && ev.sustained) me.thrust(0, -640, ev.dt) // held: float
+        continue
+      }
+      if (el === 'void') { if (!ev.sustained) this.blink(me, dir, s); continue } // a blink, not a hole around you
       if (el === 'force') {
         if (ev.sustained) me.thrust(dir.x * 900, dir.y * 900, ev.dt) // levitate, fly
         else me.impulse(dir.x * 230 * s, dir.y * 230 * s) // a launch
@@ -389,6 +503,8 @@ export class Magic {
     this.updateMotes(dt)
     this.updateWaves(dt)
     this.updateTriggers(dt)
+    this.updateZones(dt)
+    for (let i = this.ripples.length - 1; i >= 0; i--) { this.ripples[i].life -= dt; if (this.ripples[i].life <= 0) this.ripples.splice(i, 1) }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i]
       p.age += dt

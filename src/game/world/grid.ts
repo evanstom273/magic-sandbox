@@ -146,6 +146,12 @@ export const HEAT = INFO.map((m) => m.heat ?? 0)
 /** Solid for creatures: solids and powders hold you up (bar quicksand); liquids, gases, fire and plants don't. */
 export const HOLDS = INFO.map((m) => (m.kind === Kind.SOLID || m.kind === Kind.POWDER) && !m.sink)
 
+/**
+ * A field the magic has put in the world for the simulation to honour: a gravity well pulling loose
+ * cells in, a magnet pulling metal, or a bubble of slowed or sped-up time.
+ */
+export interface Field { kind: 'pull' | 'magnet' | 'slow' | 'fast'; x: number; y: number; r: number }
+
 export class CellGrid {
   readonly width: number
   readonly height: number
@@ -156,6 +162,9 @@ export class CellGrid {
   step = 0
   /** Explosions since the scene last looked: it hurts and shoves whatever's near, then clears this. */
   blasts: { x: number; y: number; r: number }[] = []
+  /** The magic's fields, and which one (index + 1, or 0 for none) each cell is in. */
+  fields: Field[] = []
+  readonly field: Uint8Array
 
   constructor(width: number, height: number) {
     this.width = width
@@ -164,6 +173,7 @@ export class CellGrid {
     this.life = new Uint16Array(width * height)
     this.seed = new Uint8Array(width * height)
     this.stamp = new Uint32Array(width * height)
+    this.field = new Uint8Array(width * height)
     let s = 12345
     for (let i = 0; i < this.seed.length; i++) this.seed[i] = (s = (s * 1103515245 + 12345) >>> 0) >>> 24
   }

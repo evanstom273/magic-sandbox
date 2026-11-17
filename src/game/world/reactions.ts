@@ -108,6 +108,22 @@ export const SHATTERS: Partial<Record<number, number>> = {
   [M.BRICK]: M.RUBBLE, // only near the middle of a blast
 }
 
+/** Salt beside it: salt stops rot and decay where it's scattered. */
+export function salted(g: CellGrid, x: number, y: number): boolean {
+  return g.get(x + 1, y) === M.SALT || g.get(x - 1, y) === M.SALT || g.get(x, y + 1) === M.SALT || g.get(x, y - 1) === M.SALT
+}
+
+/** Void meeting liquid mana: a violent burst that unmakes everything nearby but obsidian. */
+export function voidBurst(g: CellGrid, cx: number, cy: number, r: number): void {
+  g.blasts.push({ x: cx + 0.5, y: cy + 0.5, r: r * 1.4 })
+  for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+    for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+      if (!g.inside(x, y) || Math.hypot(x - cx, y - cy) > r * (0.8 + 0.2 * rnd())) continue
+      if (g.get(x, y) !== M.OBSIDIAN) g.set(x, y, M.EMPTY)
+    }
+  }
+}
+
 /** Open to the air: something empty, gassy or already burning beside it. Nothing burns without air (wood chars to coal instead). */
 export function airy(g: CellGrid, x: number, y: number): boolean {
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {

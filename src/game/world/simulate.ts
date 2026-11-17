@@ -1,5 +1,6 @@
 import { CellGrid, DENSITY, HEAT, Kind, KIND, Material as M, MATERIALS } from './grid.ts'
-import { BLUE, EXPLODES, explode, FUEL, GOLD, heatTouch, LIFE, lifeFor, lifeSteps, LIT, perSec, RICH, rnd } from './reactions.ts'
+import { airy, BLUE, EXPLODES, explode, FUEL, GOLD, heatTouch, LIFE, lifeFor, lifeSteps, LIT, perSec, RICH, rnd, salted, STEPS_PER_SECOND } from './reactions.ts'
+import type { Field } from './grid.ts'
 
 export { FUEL, lifeFor, lifeSteps, STEPS_PER_SECOND } from './reactions.ts'
 
@@ -40,16 +41,121 @@ export function step(g: CellGrid): void {
     for (let i = 0; i < W; i++) {
       const x = dir > 0 ? i : W - 1 - i
       const p = y * W + x
-      const m = c[p]
-      if (m === M.EMPTY || stamp[p] === now) continue
-      const k = KIND[m]
-      if (k === Kind.FIRE) { fire(g, x, y, p); continue }
-      if (ACTIVE[m] && react(g, x, y, p, m)) continue
-      if (k === Kind.GAS) gas(g, x, y, p, m, dir)
-      else if (k === Kind.POWDER) powder(g, x, y, p, m, dir)
-      else if (k === Kind.LIQUID) liquid(g, x, y, p, m, dir)
+      if (c[p] === M.EMPTY || stamp[p] === now) continue
+      cell(g, x, y, p, dir)
     }
   }
+  // Sped-up time: the cells in a fast bubble get extra turns, and age.
+  for (let f = 0; f < g.fields.length; f++) if (g.fields[f].kind === 'fast') fastPasses(g, f)
+}
+
+/** One cell's turn. */
+function cell(g: CellGrid, x: number, y: number, p: number, dir: number): void {
+  const m = g.cells[p]
+  const fi = g.field[p]
+  if (fi) {
+    const f = g.fields[fi - 1]
+    if (f.kind === 'slow') { if (rnd() > 0.1) return } // slowed time: a turn now and then
+    else if (f.kind === 'pull') { if (pulled(g, x, y, p, m, f)) return }
+    else if (f.kind === 'magnet' && m === M.METAL) { pulled(g, x, y, p, m, f); return }
+  }
+  const k = KIND[m]
+  if (k === Kind.FIRE) { fire(g, x, y, p); return }
+  if (ACTIVE[m] && react(g, x, y, p, m)) return
+  if (k === Kind.GAS) gas(g, x, y, p, m, dir)
+  else if (k === Kind.POWDER) powder(g, x, y, p, m, dir)
+  else if (k === Kind.LIQUID) liquid(g, x, y, p, m, dir)
+}
+
+/**
+ * A cell in a gravity well (or metal in a magnet's) moves towards the middle and is held there
+ * instead of falling: water gathers into a floating ball, sand into a heap. Packed tight near the
+ * middle, enough sand turns to stone, and snow to ice. Returns false for cells it doesn't move.
+ */
+function pulled(g: CellGrid, x: number, y: number, p: number, m: number, f: Field): boolean {
+  const k = KIND[m]
+  if (m !== M.METAL && !(k === Kind.POWDER || k === Kind.LIQUID || k === Kind.GAS)) return false
+  const ox = f.x - (x + 0.5), oy = f.y - (y + 0.5), d = Math.hypot(ox, oy)
+  if (d > 1.2 && rnd() < 0.6) {
+    const sx = Math.abs(ox) > 0.5 ? Math.sign(ox) : 0, sy = Math.abs(oy) > 0.5 ? Math.sign(oy) : 0
+    // Mostly along the way to the middle, so what gathers there is round rather than square.
+    const alongX = rnd() < Math.abs(ox) / (Math.abs(ox) + Math.abs(oy))
+    for (const [ax, ay] of alongX ? [[sx, 0], [sx, sy], [0, sy]] : [[0, sy], [sx, sy], [sx, 0]]) {
+      if (ax === 0 && ay === 0) continue
+      const nx = x + ax, ny = y + ay
+      if (!g.inside(nx, ny)) continue
+      const q = ny * g.width + nx, mq = g.cells[q]
+      if (mq === M.EMPTY || (KIND[mq] === Kind.GAS && k !== Kind.GAS)) { swap(g, p, q); return true }
+    }
+  }
+  if ((m === M.SAND || m === M.SNOW) && d < f.r * 0.5 && rnd() < perSec(0.6) && packed(g, x, y)) g.set(x, y, m === M.SAND ? M.STONE : M.ICE)
+  return true
+}
+
+/** Surrounded: at least seven of its eight neighbours are something (not empty, not gas). */
+function packed(g: CellGrid, x: number, y: number): boolean {
+  let n = 0
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (dx === 0 && dy === 0) continue
+    const m = g.get(x + dx, y + dy)
+    if (m !== M.EMPTY && KIND[m] !== Kind.GAS) n++
+  }
+  return n >= 7
+}
+
+const FAST_PASSES = 2
+/** What sped-up time does besides hurrying everything along: the codex's ageing (a second, in the bubble). */
+const AGES: Partial<Record<number, [number, number]>> = {
+  [M.WATER]: [M.EMPTY, 0.2], // evaporates
+  [M.SALT_WATER]: [M.SALT, 0.2],
+  [M.LAVA]: [M.STONE, 0.3], // cools
+  [M.STONE]: [M.SAND, 0.05], // weathers, where it's open to the air
+  [M.METAL]: [M.RUBBLE, 0.05], // corrodes, where it's open to the air
+  [M.WOOD]: [M.ROT, 0.05], // ages
+  [M.PLANT]: [M.ROT, 0.03], // grows (faster, by its own rules), blooms and rots
+  [M.ICE]: [M.WATER, 0.5],
+  [M.SNOW]: [M.WATER, 0.5],
+  [M.STEAM]: [M.WATER, 1], // condenses
+  [M.HONEY]: [M.AMBER, 0.3],
+  [M.MUD]: [M.DIRT, 0.3], // dries
+}
+
+/** Extra turns for the cells in a sped-up bubble, and their ageing. */
+function fastPasses(g: CellGrid, fi: number): void {
+  const f = g.fields[fi], W = g.width
+  const x0 = Math.max(0, Math.floor(f.x - f.r)), x1 = Math.min(W - 1, Math.ceil(f.x + f.r))
+  const y0 = Math.max(0, Math.floor(f.y - f.r)), y1 = Math.min(g.height - 1, Math.ceil(f.y + f.r))
+  for (let pass = 0; pass < FAST_PASSES; pass++) {
+    g.step++
+    const now = g.step
+    for (let y = y1; y >= y0; y--) {
+      const dir = ((y + now) & 1) ? 1 : -1
+      for (let i = x0; i <= x1; i++) {
+        const x = dir > 0 ? i : x1 - (i - x0)
+        const p = y * W + x
+        const m = g.cells[p]
+        if (g.field[p] !== fi + 1 || m === M.EMPTY || g.stamp[p] === now) continue
+        if (age(g, x, y, m)) continue
+        cell(g, x, y, p, dir)
+      }
+    }
+  }
+}
+
+function age(g: CellGrid, x: number, y: number, m: number): boolean {
+  if (m === M.CRYSTAL) {
+    // Crystal grows, slowly, into open space beside it.
+    if (rnd() < 0.05 / (STEPS_PER_SECOND * FAST_PASSES)) {
+      const [nx, ny, n] = neighbour(g, x, y)
+      if (n === M.EMPTY) g.set(nx, ny, M.CRYSTAL)
+    }
+    return false
+  }
+  const a = AGES[m]
+  if (!a || rnd() > a[1] / (STEPS_PER_SECOND * FAST_PASSES)) return false
+  if ((m === M.STONE || m === M.METAL) && !airy(g, x, y)) return false
+  g.set(x, y, a[0], lifeFor(a[0]))
+  return true
 }
 
 /** What a gas leaves when its time runs out: steam partly rains back; the rest just thin away. */
@@ -346,11 +452,6 @@ function hot(g: CellGrid, x: number, y: number, p: number, m: number): boolean {
     }
     heatTouch(g, nx, ny, level, scale)
   }
-  return false
-}
-
-function salted(g: CellGrid, x: number, y: number): boolean {
-  for (const [dx, dy] of N4) if (g.get(x + dx, y + dy) === M.SALT) return true
   return false
 }
 

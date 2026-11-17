@@ -68,6 +68,7 @@ export class MainScene extends Phaser.Scene {
   private bodyKey = ''
   private hurtFlash = 0
   private burnAcc = 0 // burn damage building up, taken in bites
+  private magicAcc = 0 // the same, from magic that eats cells
   private manaDrain = 0 // liquid mana soaked up, in cells, still to remove from the pool
   private blastCool = 0 // a moment after a blast hurts before another can
   // Alive, shattering (slow motion), dead (waiting for Jump), or gathering back together at the start.
@@ -135,9 +136,10 @@ export class MainScene extends Phaser.Scene {
       w.__infiniteMana = (on: boolean) => { this.mana.infinite = on }
       w.__setMana = (n: number) => { this.mana.value = n }
       w.__health = () => ({ value: this.health.value, marks: this.health.marks.map((m) => m.kind) })
-      w.__dummies = () => this.dummies.map((d) => ({ x: d.x, y: d.y, vx: d.vx, frozen: d.frozen, healed: d.healed, scorched: d.scorched }))
+      w.__dummies = () => this.dummies.map((d) => ({ x: d.x, y: d.y, vx: d.vx, frozen: d.frozen, healed: d.healed, scorched: d.scorched, stunned: d.stunned, poisoned: d.poisoned }))
       w.__runes = () => this.magic.runes.length
       w.__anchors = () => this.magic.anchors.length
+      w.__zones = () => this.magic.zones.map((z) => ({ kind: z.kind, x: z.x, y: z.y, r: z.r }))
       w.__Material = Material
       w.__teleport = (x: number, y: number) => Object.assign(this.player, { x, y, vx: 0, vy: 0, grounded: false, fallDist: 0 })
     }
@@ -222,7 +224,8 @@ export class MainScene extends Phaser.Scene {
 
     const p = this.player
     const env = this.surroundings()
-    const ev = stepPlayer(p, input, dt, this.grid.isSolid, env)
+    // In a time bubble, you're slowed or sped up too.
+    const ev = stepPlayer(p, input, dt * this.magic.timeScaleAt(p.x, p.y - PLAYER.height / 2), this.grid.isSolid, env)
     this.updateMagic(dt)
 
     if (ev.jumped) { this.squash.jump(); this.dust.puff(p.x, p.y, 6, 30) }
@@ -273,6 +276,13 @@ export class MainScene extends Phaser.Scene {
       h: PLAYER.height,
       isCaster: true,
       heal: (n: number) => { if (this.mode === 'alive') this.health.heal(n) },
+      // Magic that eats cells (Void, Decay): taken as burn-like bites, built up like touching lava.
+      hurt: (n: number) => {
+        if (this.mode !== 'alive') return
+        this.magicAcc += n
+        if (this.magicAcc >= 3) { const k = Math.floor(this.magicAcc); this.magicAcc -= k; this.hurt(k, 0.5, 'burn') }
+      },
+      moveTo: (x: number, y: number) => Object.assign(this.player, { x, y, fallDist: 0, onWall: 0 }),
       impulse: (vx: number, vy: number) => {
         const p = this.player
         p.vx += vx; p.vy += vy; p.boost = 0.35; p.grounded = false; p.onWall = 0
@@ -351,7 +361,7 @@ export class MainScene extends Phaser.Scene {
     this.mana.update(dt, this.caster.casting)
     this.magic.update(dt)
     for (const d of this.dummies) {
-      d.update(dt, this.grid.isSolid)
+      d.update(dt * this.magic.timeScaleAt(d.x, d.y - d.h / 2), this.grid.isSolid)
       if (d.y > 400) Object.assign(d, { x: d.home.x, y: d.home.y, vx: 0, vy: 0 })
     }
     hud.set({ mana: this.mana.value, charge: this.caster.charging ? this.caster.charge : 0 })
@@ -678,7 +688,8 @@ export class MainScene extends Phaser.Scene {
     // Stand-in dummies: grey blocks with dot eyes, tinted by what's affecting them.
     for (const d of this.dummies) {
       const left = Math.round(d.x - d.w / 2), top = Math.round(d.y - d.h)
-      const body = d.frozen > 0 ? 0xa8dcf0 : d.scorched > 0 ? 0xd88a5a : d.wet > 0 ? 0x7f9fc8 : 0x8a8aa0
+      const body = d.eaten > 0 ? 0xc03aff : d.frozen > 0 ? 0xa8dcf0 : d.scorched > 0 ? 0xd88a5a : d.stunned > 0 && Math.floor(this.time.now / 80) % 2 ? 0x9ad8c8
+        : d.poisoned > 0 ? 0x9aa63a : d.wet > 0 ? 0x7f9fc8 : 0x8a8aa0
       g.fillStyle(INK, 1); g.fillRect(left, top, d.w, d.h)
       g.fillStyle(body, 1); g.fillRect(left + 1, top + 1, d.w - 2, d.h - 2)
       g.fillStyle(INK, 1); g.fillRect(left + 3, top + 3, 1, 2); g.fillRect(left + d.w - 4, top + 3, 1, 2)
@@ -714,6 +725,34 @@ export class MainScene extends Phaser.Scene {
     for (const m of this.magic.motes) {
       g.fillStyle(elementInfo(m.els[0]).colour, 1)
       g.fillRect(Math.floor(m.x), Math.floor(m.y), 2, 2)
+    }
+    // Fields: a gravity well's dots spiralling in, a magnet's ring, a time bubble (pale and still when
+    // slowed, bright and ticking when sped up). Sound's rings spread out.
+    const now = this.time.now / 1000
+    for (const z of this.magic.zones) {
+      const fade = Math.min(1, z.life / 0.3)
+      const colour = z.kind === 'pull' ? 0x8a6cff : z.kind === 'magnet' ? 0xff7ab8 : z.kind === 'slow' ? 0xcbb27a : 0xffe6a0
+      if (z.kind === 'slow' || z.kind === 'fast') { g.fillStyle(colour, 0.08 * fade); g.fillCircle(z.x, z.y, z.r) }
+      const n = Math.max(16, Math.round(z.r * 3))
+      g.fillStyle(colour, 0.55 * fade)
+      for (let i = 0; i < n; i += z.kind === 'fast' ? 2 : 1) {
+        const a = (i / n) * 6.283 + (z.kind === 'fast' ? now * 3 : z.kind === 'slow' ? now * 0.2 : 0)
+        g.fillRect(Math.floor(z.x + Math.cos(a) * z.r), Math.floor(z.y + Math.sin(a) * z.r), 1, 1)
+      }
+      if (z.kind === 'pull' || z.kind === 'magnet') {
+        for (let i = 0; i < 6; i++) {
+          const t = ((now * 0.8 + i / 6) % 1), a = i * 1.047 + t * 3
+          const rr = z.r * (1 - t)
+          g.fillStyle(colour, 0.8 * fade * (1 - t * 0.5))
+          g.fillRect(Math.floor(z.x + Math.cos(a) * rr), Math.floor(z.y + Math.sin(a) * rr), 1, 1)
+        }
+      }
+    }
+    for (const f of this.magic.ripples) {
+      const t = 1 - f.life / f.max, r = f.r * t
+      g.fillStyle(f.colour, (f.life / f.max) * 0.8)
+      const n = Math.max(12, Math.round(r * 5))
+      for (let i = 0; i < n; i++) g.fillRect(Math.floor(f.x + Math.cos((i / n) * 6.283) * r), Math.floor(f.y + Math.sin((i / n) * 6.283) * r), 1, 1)
     }
     for (const f of this.magic.flashes) {
       const t = 1 - f.life / f.max

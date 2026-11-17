@@ -160,3 +160,57 @@ describe('triggers', () => {
     expect(m.hasRecast(1)).toBe(true)
   })
 })
+
+describe('the field forces', () => {
+  test('Gravity leaves a well that pulls a body in, then wears off', () => {
+    const m = new Magic(room())
+    const me = body(20, 60, true), dummy = body(80, 60)
+    m.bodies = [me, dummy]
+    m.cast({ elements: ['gravity'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 70, y: 45 }, me)
+    expect(m.zones.map((z) => z.kind)).toEqual(['pull'])
+    run(m, 0.2)
+    expect(dummy.pushed.x).toBeLessThan(0) // towards the well
+    run(m, 6)
+    expect(m.zones).toHaveLength(0)
+  })
+
+  test('Time slows inside its bubble; mixed with Life it speeds things up', () => {
+    const m = new Magic(room())
+    const me = body(20, 60, true)
+    m.bodies = [me]
+    m.cast({ elements: ['time'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 70, y: 45 }, me)
+    expect(m.timeScaleAt(70, 45)).toBeLessThan(1)
+    expect(m.timeScaleAt(20, 30)).toBe(1)
+    m.cast({ elements: ['time', 'life'], shape: 'aoe', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 120, y: 45 }, me)
+    expect(m.timeScaleAt(120, 45)).toBeGreaterThan(1)
+  })
+
+  test('Void cast on yourself blinks you along the aim, stopping short of a wall', () => {
+    const g = room()
+    for (let y = 30; y < 60; y++) for (let x = 50; x < 54; x++) g.set(x, y, M.STONE)
+    const m = new Magic(g)
+    const me = body(20, 60, true)
+    me.moveTo = (x: number, y: number) => { me.x = x; me.y = y }
+    m.bodies = [me]
+    m.cast({ elements: ['void'], shape: 'self', cast: 'instant' }, once, { x: 24, y: 52 }, { x: 100, y: 52 }, me)
+    expect(me.x).toBeGreaterThan(40)
+    expect(me.x).toBeLessThan(50 - 4) // stopped before the wall
+  })
+
+  test('Void eats the cells of whatever it lands on, the caster\'s too if careless', () => {
+    const m = new Magic(room())
+    let hurt = 0
+    const me = Object.assign(body(60, 60, true), { hurt(n: number) { hurt += n } })
+    m.bodies = [me]
+    m.cast({ elements: ['void'], shape: 'aoe', cast: 'instant' }, once, { x: 64, y: 50 }, { x: 60, y: 54 }, me)
+    expect(hurt).toBeGreaterThan(0)
+  })
+
+  test('a spell of Life and Decay fizzles', () => {
+    const m = new Magic(room())
+    const me = body(20, 60, true)
+    m.bodies = [me]
+    m.cast({ elements: ['life', 'decay'], shape: 'projectile', cast: 'instant' }, once, { x: 24, y: 50 }, { x: 100, y: 50 }, me)
+    expect(m.projectiles).toHaveLength(0)
+  })
+})

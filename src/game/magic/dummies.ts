@@ -17,6 +17,9 @@ export class Dummy implements Body {
   scorched = 0
   wet = 0
   healed = 0
+  poisoned = 0
+  stunned = 0
+  eaten = 0 // a flash where Void (or worse) took a bite; dummies can't be hurt
   readonly home: { x: number; y: number }
 
   constructor(x: number, y: number) {
@@ -26,6 +29,7 @@ export class Dummy implements Body {
   }
 
   heal(n: number): void { if (n > 0) this.healed = 0.6 }
+  hurt(): void { this.eaten = 0.4 }
   impulse(vx: number, vy: number): void { if (this.frozen <= 0) { this.vx += vx; this.vy += vy } }
   thrust(ax: number, ay: number, dt: number): void { this.impulse(ax * dt, ay * dt) }
   affect(el: ElementId): void {
@@ -33,6 +37,8 @@ export class Dummy implements Body {
     if (f === 'cold') { this.frozen = 2.5; this.vx = 0 }
     else if (f === 'hot') { this.scorched = 1; this.frozen = 0 }
     else if (f === 'wet') this.wet = 3
+    else if (f === 'poison') this.poisoned = 3
+    else if (f === 'stun') { this.stunned = this.wet > 0 ? 2.5 : 1.2; this.vx = 0 }
   }
 
   update(dt: number, solid: SolidAt): void {
@@ -40,6 +46,9 @@ export class Dummy implements Body {
     this.scorched = Math.max(0, this.scorched - dt)
     this.wet = Math.max(0, this.wet - dt)
     this.healed = Math.max(0, this.healed - dt)
+    this.poisoned = Math.max(0, this.poisoned - dt)
+    this.stunned = Math.max(0, this.stunned - dt)
+    this.eaten = Math.max(0, this.eaten - dt)
     for (let i = 0; i < 6 && boxHits(solid, this.x, this.y, this.w, this.h); i++) this.y -= 1
     this.vy = Math.min(300, this.vy + 560 * dt)
     this.vx *= Math.exp(-3 * dt)

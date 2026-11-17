@@ -166,3 +166,33 @@ test('a trigger built in the builder: a water bolt that waits, then sets off hea
   await expect.poll(anchors).toBe(0) // set off
   expect(await page.evaluate(() => (window as unknown as { __magic: () => { projectiles: number } }).__magic().projectiles)).toBe(0) // and no second bolt
 })
+
+test('the builder\'s element search and filters', async ({ page }) => {
+  await page.goto('./')
+  await page.waitForFunction(() => typeof (window as unknown as { __magic?: unknown }).__magic === 'function')
+  await page.getByRole('button', { name: 'Spells' }).dispatchEvent('pointerdown')
+  const builder = page.getByRole('dialog', { name: 'Spell builder' })
+  await builder.getByRole('button', { name: 'Slot 1' }).click()
+  const search = builder.getByRole('searchbox', { name: 'Search elements', exact: true })
+  await search.pressSequentially('bone') // the b typed here mustn't close the builder
+  await expect(builder).toBeVisible()
+  await expect(builder.getByRole('button', { name: 'Bone', exact: true })).toBeVisible()
+  await expect(builder.getByRole('button', { name: 'Water', exact: true })).toHaveCount(0)
+  await search.press('Escape') // clears the search first
+  await expect(search).toHaveValue('')
+  await expect(builder).toBeVisible()
+
+  const show = builder.getByRole('group', { name: 'Show elements', exact: true })
+  await show.getByRole('button', { name: /^Liquids/ }).click()
+  await expect(builder.getByRole('button', { name: 'Lava', exact: true })).toBeVisible()
+  await expect(builder.getByRole('button', { name: 'Sand', exact: true })).toHaveCount(0)
+  await builder.getByRole('button', { name: 'Lava', exact: true }).click()
+  await show.getByRole('button', { name: /^Picked/ }).click()
+  await expect(builder.getByRole('button', { name: 'Water', exact: true })).toBeVisible()
+  await expect(builder.getByRole('button', { name: 'Lava', exact: true })).toBeVisible()
+  await expect(builder.getByRole('button', { name: 'Oil', exact: true })).toHaveCount(0)
+
+  await search.press('Escape') // with the search empty, Escape closes the builder
+  await expect(builder).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Spell 1: Water \+ Lava Projectile/ })).toBeVisible()
+})

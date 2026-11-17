@@ -3,8 +3,9 @@ import { hud, spellEdits } from '../game/bridge.ts'
 import { touchInput } from '../game/input/touchInput.ts'
 import {
   CAST_HELP, CAST_TYPES, castCost, channelCost, ELEMENTS, FOLLOW_UP_SHAPES, SHAPE_HELP, SHAPES, STAND_IN_CAPACITY, TRIGGER_HELP, TRIGGERS,
-  toggleElement, withFollowUp, withShape, withTrigger, type Spell,
+  toggleElement, withFollowUp, withShape, withTrigger, type ElementKind, type Spell,
 } from '../game/magic/spells.ts'
+import type { ElementId } from '../game/world/elements.ts'
 
 const hex = (n: number) => '#' + n.toString(16).padStart(6, '0')
 
@@ -35,6 +36,68 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   )
 }
 
+type Filter = ElementKind | 'all' | 'picked'
+const FILTERS: { id: Filter; name: string }[] = [
+  { id: 'all', name: 'All' },
+  { id: 'force', name: 'Forces' },
+  { id: 'liquid', name: 'Liquids' },
+  { id: 'gas', name: 'Gases' },
+  { id: 'solid', name: 'Solids' },
+  { id: 'made', name: 'Made by reactions' },
+  { id: 'picked', name: 'Picked' },
+]
+
+/**
+ * Elements to pick from, with a search box and filters by the codex's groups (there are a lot of
+ * them). `prefix` names the buttons apart when there are two pickers (the follow-up's are "Then ...").
+ */
+function ElementPicker({ title, note, picked, onToggle, prefix = '' }: { title: string; note: string; picked: readonly ElementId[]; onToggle: (id: ElementId) => void; prefix?: string }) {
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
+  const q = query.trim().toLowerCase()
+  const inFilter = (f: Filter) => ELEMENTS.filter((e) => f === 'all' || (f === 'picked' ? picked.includes(e.id) : e.kind === f))
+  const shown = inFilter(filter).filter((e) => !q || e.name.toLowerCase().includes(q))
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="flex flex-wrap items-baseline gap-x-2 text-[11px] font-semibold tracking-[0.08em] text-white/55 uppercase">
+        {title}
+        <span className="font-normal tracking-normal text-white/40 normal-case">{note}</span>
+      </h3>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape' && query) { e.stopPropagation(); setQuery('') } }} // clears first; doesn't close
+        placeholder="Search elements"
+        aria-label={`${prefix}Search elements`}
+        className="w-full rounded-md border-2 border-[#2c2f45] bg-[#14151f] px-2.5 py-1.5 text-[14px] text-white placeholder:text-white/35 focus:border-[#8fd3ff] focus:outline-none"
+      />
+      <div role="group" aria-label={`${prefix}Show elements`} className="flex flex-wrap gap-1">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            aria-pressed={filter === f.id}
+            onClick={() => setFilter(f.id)}
+            className={`rounded-full border px-2.5 py-0.5 text-[12px] font-semibold ${filter === f.id ? 'border-[#8fd3ff] bg-[#1d2436] text-white' : 'border-[#2c2f45] bg-transparent text-white/60 hover:border-[#454a6a]'}`}
+          >
+            {f.name} <span className="font-normal text-white/40">{inFilter(f.id).length}</span>
+          </button>
+        ))}
+      </div>
+      <div className="flex max-h-[min(260px,40dvh)] flex-wrap content-start gap-1.5 overflow-y-auto">
+        {shown.map((e) => (
+          <Chip key={e.id} label={`${prefix}${e.name}`} on={picked.includes(e.id)} onClick={() => onToggle(e.id)}>
+            <span className="h-2.5 w-2.5 rounded-[2px] border border-white/25" style={{ background: hex(e.colour) }} />
+            {e.name}
+          </Chip>
+        ))}
+        {!shown.length && <p className="m-0 py-1 text-[13px] text-white/45">{filter === 'picked' && !q ? 'Nothing picked yet.' : `No elements match "${query.trim()}"${filter === 'all' ? '' : ' here'}.`}</p>}
+      </div>
+    </section>
+  )
+}
+
 // The spell builder (#82): pick a hotbar slot, then its elements, shape and casting type.
 // The game pauses while it's open. Changes apply straight away.
 export function SpellBuilder() {
@@ -49,7 +112,11 @@ export function SpellBuilder() {
 
   useEffect(() => {
     if (!builderOpen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') { e.preventDefault(); close() } }
+    const onKey = (e: KeyboardEvent) => {
+      // Typing in a search box is typing, not B for close (the box handles its own Escape first).
+      if (e.target instanceof HTMLInputElement && e.key !== 'Escape') return
+      if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') { e.preventDefault(); close() }
+    }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
   }, [builderOpen])
@@ -78,14 +145,12 @@ export function SpellBuilder() {
           ))}
         </Section>
 
-        <Section title="Elements" note={`Up to ${STAND_IN_CAPACITY}: the stand-in catalyst's capacity. Mixed elements react by the world's rules.`}>
-          {ELEMENTS.map((e) => (
-            <Chip key={e.id} on={spell.elements.includes(e.id)} onClick={() => set(toggleElement(spell, e.id))}>
-              <span className="h-2.5 w-2.5 rounded-[2px] border border-black/40" style={{ background: hex(e.colour) }} />
-              {e.name}
-            </Chip>
-          ))}
-        </Section>
+        <ElementPicker
+          title="Elements"
+          note={`Up to ${STAND_IN_CAPACITY}: the stand-in catalyst's capacity. Mixed elements react by the world's rules.`}
+          picked={spell.elements}
+          onToggle={(id) => set(toggleElement(spell, id))}
+        />
 
         <Section title="Shape" note={SHAPE_HELP[spell.shape]}>
           {SHAPES.map((s) => (
@@ -108,17 +173,16 @@ export function SpellBuilder() {
 
         {spell.trigger && (
           <div className="flex flex-col gap-3 rounded-lg border-2 border-dashed border-[#2c2f45] p-3">
-            <Section title="Then: elements" note={`Up to ${STAND_IN_CAPACITY}.`}>
-              {ELEMENTS.map((e) => (
-                <Chip key={e.id} label={`Then ${e.name}`} on={spell.trigger!.then.elements.includes(e.id)} onClick={() => {
-                  const then = spell.trigger!.then
-                  set(withFollowUp(spell, { ...then, elements: toggleElement({ ...spell, elements: then.elements }, e.id).elements }))
-                }}>
-                  <span className="h-2.5 w-2.5 rounded-[2px] border border-black/40" style={{ background: hex(e.colour) }} />
-                  {e.name}
-                </Chip>
-              ))}
-            </Section>
+            <ElementPicker
+              title="Then: elements"
+              note={`Up to ${STAND_IN_CAPACITY}.`}
+              prefix="Then "
+              picked={spell.trigger.then.elements}
+              onToggle={(id) => {
+                const then = spell.trigger!.then
+                set(withFollowUp(spell, { ...then, elements: toggleElement({ ...spell, elements: then.elements }, id).elements }))
+              }}
+            />
             <Section title="Then: shape" note={SHAPE_HELP[spell.trigger.then.shape]}>
               {FOLLOW_UP_SHAPES.map((id) => (
                 <Chip key={id} label={`Then ${SHAPES.find((s) => s.id === id)!.name}`} on={spell.trigger!.then.shape === id} onClick={() => set(withFollowUp(spell, { ...spell.trigger!.then, shape: id }))}>
